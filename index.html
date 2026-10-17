@@ -63,10 +63,14 @@
 
     <!-- ===== ABA HISTÓRICO ===== -->
     <section id="aba-historico" class="aba" aria-label="Histórico">
-      <div class="chips" id="filtro-historico"></div>
-      <div class="chips" id="filtro-cat-historico"></div>
-      <div class="chips" id="filtro-tempo-historico"></div>
-      <div class="def-grelha" id="hist-tempo-folha" hidden></div>
+      <div class="filtros-hist-barra">
+        <div class="chips" id="filtro-historico"></div>
+        <span class="filtros-hist-btn">
+          <button type="button" class="btn-mini azul" id="btn-filtros-hist"
+                  data-i18n-aria="filtros" aria-label="Filtros" data-i18n="filtros">Filtros</button>
+          <span class="badge" id="badge-filtros" hidden></span>
+        </span>
+      </div>
       <div id="lista-historico"></div>
     </section>
   </main>
@@ -161,6 +165,18 @@
         <button type="button" class="btn-icone" id="btn-fechar-detalhe" aria-label="Fechar" data-i18n-aria="fechar">✕</button>
       </div>
       <div id="detalhe-conteudo"></div>
+    </div>
+  </div>
+
+  <!-- ===== Folha de filtros do Histórico ===== -->
+  <div class="fundo" id="filtros-fundo" hidden>
+    <div class="folha" role="dialog" aria-modal="true" aria-labelledby="filtros-titulo">
+      <div class="folha-cabecalho">
+        <h2 id="filtros-titulo" data-i18n="filtros">Filtros</h2>
+        <button type="button" class="btn-icone" id="btn-fechar-filtros" aria-label="Fechar"
+                data-i18n-aria="fechar">✕</button>
+      </div>
+      <div id="filtros-conteudo"></div>
     </div>
   </div>
 

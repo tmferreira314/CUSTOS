@@ -63,7 +63,8 @@ const TRAD = {
     add_gasto: 'Adicionar gasto', valor_gasto: 'Valor gasto (€)', tipo_gasto: 'Tipo de gasto',
     origem_ganho: 'Origem do ganho', escreve_origem: 'Escreve a origem', data: 'Data',
     explicacao: 'Explicação (opcional)', exemplo_nota: 'Ex.: almoço com amigos',
-    apagar: 'Apagar', guardar: 'Guardar', precisa_js: 'Esta app precisa de JavaScript activo.'
+    apagar: 'Apagar', guardar: 'Guardar', precisa_js: 'Esta app precisa de JavaScript activo.',
+    filtros: 'Filtros'
   },
   en: {
     titulo_app: 'Wallet — Expenses and Income',
@@ -85,6 +86,7 @@ function tr(chave) {
 const PT_EN = {
   'Carteira v1.1 — tudo guardado apenas neste dispositivo (IndexedDB). Sem contas, sem servidores, funciona offline.':
     'Wallet v1.1 — everything stored only on this device (IndexedDB). No accounts, no servers, works offline.',
+  'Carteira v1.2 —': 'Wallet v1.2 —',
   'O JSON substitui tudo (restauro completo). O CSV acrescenta movimentos aos que já tens. No iPhone, os ficheiros ficam em "Ficheiros → Descarregamentos".':
     'JSON replaces everything (full restore). CSV adds movements to the ones you already have. On iPhone, files are saved in "Files → Downloads".',
   'Apaga apenas os movimentos do período escolhido. Para apagar um movimento em particular, abre-o no Histórico (ou numa lista) e usa "Apagar".':
@@ -225,7 +227,28 @@ const PT_EN = {
   'Sem ligação à internet. Liga-te e tenta outra vez.': 'No internet connection. Connect and try again.',
   'A atualizar…': 'Updating…',
   'Idioma definido para português.': 'Language set to Portuguese.',
-  'Idioma definido para inglês.': 'Language set to English.'
+  'Idioma definido para inglês.': 'Language set to English.',
+  /* filtros do Histórico */
+  'Filtros': 'Filters', 'Categorias': 'Categories', 'Tempo': 'Time',
+  'Limpar': 'Clear', 'Aplicar': 'Apply',
+  /* movimentos recorrentes */
+  'Movimentos recorrentes': 'Recurring movements',
+  'Dia do mês': 'Day of month', 'Categoria/Origem': 'Category/Source',
+  'Valor (€)': 'Amount (€)', 'Adicionar recorrente': 'Add recurring',
+  'Sem recorrentes': 'No recurring rules',
+  'Recorrente criado ✓': 'Recurring rule created ✓',
+  'Recorrente apagado ✓': 'Recurring rule deleted ✓',
+  'Recorrente': 'Recurring',
+  'Apagar este recorrente? Os movimentos já criados mantêm-se.':
+    'Delete this recurring rule? Movements already created are kept.',
+  'Escolhe uma categoria.': 'Choose a category.',
+  'movimento(s) adicionado(s) ✓': 'movement(s) added ✓',
+  'movimento(s) recorrente(s) adicionado(s) ✓': 'recurring movement(s) added ✓',
+  'Cria sozinho um movimento fixo todos os meses no dia escolhido':
+    'Creates a fixed movement every month on the chosen day',
+  '(nos meses mais curtos usa o último dia) e, sempre que abres a app, completa o que faltar.':
+    '(in shorter months it uses the last day) and, whenever you open the app, fills in what is missing.',
+  'O que': 'What'
 };
 let PT_ORDENADO = [];
 function iniciarDicionario() {
@@ -335,7 +358,7 @@ window.prompt = (m, d) => promptOriginal(traduzirTexto(m), d);
 /* ---------- 2. Base de dados local (IndexedDB) ---------- */
 
 const NOME_BD = 'carteira';
-const V_BD = 1;
+const V_BD = 2;
 let bd = null;
 
 function abrirBD() {
@@ -348,6 +371,9 @@ function abrirBD() {
       }
       if (!db.objectStoreNames.contains('categorias')) {
         db.createObjectStore('categorias', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('recorrentes')) {
+        db.createObjectStore('recorrentes', { keyPath: 'id', autoIncrement: true });
       }
     };
     req.onsuccess = () => { bd = req.result; res(bd); };
@@ -405,15 +431,22 @@ function idbLote(store, itens) {
 }
 
 /* Substitui tudo (usado no restauro de JSON) */
-function idbSubstituir(movs, cats) {
+function idbSubstituir(movs, cats, recs) {
   return new Promise((res, rej) => {
-    const t = bd.transaction(['movimentos', 'categorias'], 'readwrite');
+    const lojas = ['movimentos', 'categorias'];
+    if (recs) lojas.push('recorrentes');
+    const t = bd.transaction(lojas, 'readwrite');
     const sm = t.objectStore('movimentos');
     const sc = t.objectStore('categorias');
     sm.clear();
     sc.clear();
     movs.forEach((m) => sm.put(m)); // se não têm id, o próprio IndexedDB cria
     cats.forEach((c) => sc.put(c));
+    if (recs) {
+      const sr = t.objectStore('recorrentes');
+      sr.clear();
+      recs.forEach((r) => sr.put(r));
+    }
     t.oncomplete = () => res();
     t.onerror = () => rej(t.error);
     t.onabort = () => rej(t.error);
@@ -421,7 +454,7 @@ function idbSubstituir(movs, cats) {
 }
 
 function idbApagarTudo() {
-  return idbSubstituir([], []);
+  return idbSubstituir([], [], []);
 }
 
 /* ---------- 3. Estado da app ---------- */
@@ -429,12 +462,13 @@ function idbApagarTudo() {
 const estado = {
   movs: [],
   cats: [],
+  recs: [],
   aba: 'gastos',
   periodo: { gastos: 'mes', ganhos: 'mes', balanco: 'mes' },
   custom: { gastos: null, ganhos: null, balanco: null },
   hist: 'tudo',
-  /* Filtros do Histórico: categoria e tempo */
-  histCat: 'todas',
+  /* Filtros do Histórico: categorias (multi) e tempo */
+  histCats: [],
   histTempo: { tipo: 'tudo', data: hojeISO(), ini: '', fim: '' }
 };
 
@@ -454,6 +488,7 @@ function padraoCats() {
 async function carregarDados() {
   estado.movs = await idbTodos('movimentos');
   estado.cats = await idbTodos('categorias');
+  estado.recs = (await idbTodos('recorrentes')) || [];
 
   if (!estado.cats.length) {
     await idbLote('categorias', padraoCats());
@@ -827,7 +862,7 @@ function linhaMov(m, mostrarData) {
   }
   return `<button type="button" class="mov" data-id="${m.id}">
     <span class="cor" style="background:${corDe(m.categoria)}"></span>
-    <span class="meio"><span class="t">${esc(m.categoria)}</span><span class="n">${sub}</span></span>
+    <span class="meio"><span class="t">${m.recorrenteId ? '<span class="marca-rec" aria-label="Recorrente">↻</span> ' : ''}${esc(m.categoria)}</span><span class="n">${sub}</span></span>
     <span class="val ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmt(m.valor)}</span>
   </button>`;
 }
@@ -1097,6 +1132,10 @@ function histBase() {
   let movs = ordenarDesc(estado.movs);
   if (estado.hist === 'gastos') movs = movs.filter((m) => m.tipo === 'gasto');
   if (estado.hist === 'ganhos') movs = movs.filter((m) => m.tipo === 'ganho');
+  if (estado.histCats.length) {
+    const escolhidas = new Set(estado.histCats);
+    movs = movs.filter((m) => escolhidas.has(m.tipo + '|' + m.categoria));
+  }
   const iv = histIntervalo();
   if (iv) movs = movs.filter((m) => m.data >= iv.inicio && m.data <= iv.fim);
   return movs;
@@ -1105,34 +1144,18 @@ function histBase() {
 function renderHistorico() {
   exportadores = {};
 
-  /* 1. Tipo: tudo / gastos / ganhos */
+  /* 1. Tipo: tudo / gastos / ganhos (únicos botões sempre visíveis) */
   const filtros = [['tudo', 'Tudo'], ['gastos', 'Gastos'], ['ganhos', 'Ganhos']];
   $('#filtro-historico').innerHTML = filtros
     .map(([id, nome]) => `<button type="button" class="chip${estado.hist === id ? ' ativa' : ''}" data-hist="${id}">${nome}</button>`)
     .join('');
 
-  const base = histBase();
+  /* Contador no botão "Filtros" */
+  const nFiltros = estado.histCats.length + (estado.histTempo.tipo !== 'tudo' ? 1 : 0);
+  const badge = $('#badge-filtros');
+  if (badge) { badge.textContent = nFiltros ? String(nFiltros) : ''; badge.hidden = !nFiltros; }
 
-  /* 2. Categoria/origem (apenas as que existem na lista filtrada) */
-  const cats = [...new Set(base.map((m) => m.categoria))]
-    .sort((a, b) => a.localeCompare(b, 'pt', { sensitivity: 'base' }));
-  if (estado.histCat !== 'todas' && !cats.includes(estado.histCat)) estado.histCat = 'todas';
-  $('#filtro-cat-historico').innerHTML = cats.length
-    ? [`<button type="button" class="chip${estado.histCat === 'todas' ? ' ativa' : ''}" data-histcat="todas">Todas</button>`,
-       ...cats.map((nome) =>
-         `<button type="button" class="chip${estado.histCat === nome ? ' ativa' : ''}" data-histcat="${esc(nome)}">${esc(nome)}</button>`)]
-      .join('')
-    : '';
-
-  /* 3. Tempo: sempre / dia / semana / mês / ano / intervalo */
-  $('#filtro-tempo-historico').innerHTML = histTempoOpcoes()
-    .map(([id, nome]) => `<button type="button" class="chip${estado.histTempo.tipo === id ? ' ativa' : ''}" data-histtempo="${id}">${nome}</button>`)
-    .join('');
-
-  renderHistTempoFolha();
-
-  let movs = base;
-  if (estado.histCat !== 'todas') movs = movs.filter((m) => m.categoria === estado.histCat);
+  let movs = histBase();
 
   registarExportador('historico-lista', 'historico', ['data','tipo','valor','categoria','nota'], movs.map(movLinhaCSV));
 
@@ -1141,7 +1164,7 @@ function renderHistorico() {
     const semPeriodo = estado.histTempo.tipo === 'intervalo' && !iv;
     const texto = semPeriodo
       ? 'Escolhe o intervalo de tempo.'
-      : (estado.histTempo.tipo !== 'tudo' || estado.histCat !== 'todas' || estado.hist !== 'tudo'
+      : (estado.histTempo.tipo !== 'tudo' || estado.histCats.length || estado.hist !== 'tudo'
           ? 'Nada corresponde a esses filtros.'
           : 'Ainda não há movimentos para mostrar.');
     $('#lista-historico').innerHTML = `<p class="vazio">${texto}</p>`;
@@ -1164,12 +1187,14 @@ function renderHistorico() {
   const iv = histIntervalo();
   const rotulo = estado.histTempo.tipo === 'tudo' ? '' :
     (iv ? periodoTexto({ tipo: 'intervalo', ...iv }) : '');
+  const nomesCats = estado.histCats.map((k) => k.split('|')[1]).join(', ');
 
   $('#lista-historico').innerHTML = `<div class="cartao">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       <h3 style="margin:0">Histórico (${movs.length})${rotulo ? ` · ${rotulo}` : ''}</h3>
       ${barraExportar('historico-lista')}
     </div>
+    ${nomesCats ? `<div class="filtros-resumo">${esc(nomesCats)}</div>` : ''}
     ${grupos.map((g) => {
       const net = round2(g.ganhos - g.gastos);
       return `<div class="lista-dia">
@@ -1183,23 +1208,126 @@ function renderHistorico() {
   </div>`;
 }
 
-/* Campos de data do filtro temporal (dia e intervalo) */
-function renderHistTempoFolha() {
-  const el = $('#hist-tempo-folha');
-  if (!el) return;
-  const t = estado.histTempo;
-  if (t.tipo === 'dia') {
-    el.hidden = false;
-    el.innerHTML = `<label>Dia <input type="date" class="controlo" id="hist-dia" value="${t.data || hojeISO()}"></label>`;
-  } else if (t.tipo === 'intervalo') {
-    el.hidden = false;
-    el.innerHTML = `
-      <label>De <input type="date" class="controlo" id="hist-ini" value="${t.ini}"></label>
-      <label>Até <input type="date" class="controlo" id="hist-fim" value="${t.fim}"></label>`;
-  } else {
-    el.hidden = true;
-    el.innerHTML = '';
+/* ---------- 6a-bis. Painel de filtros do Histórico ---------- */
+
+let rascunhoFiltros = null;
+
+/* Categorias/origens disponíveis para o tipo escolhido */
+function gruposCatHist() {
+  const tipos = estado.hist === 'tudo' ? ['gasto', 'ganho'] : [estado.hist === 'gastos' ? 'gasto' : 'ganho'];
+  return tipos.map((t) => ({ tipo: t, nomes: catsDe(t) }));
+}
+
+/* Mantém apenas categorias compatíveis com o tipo escolhido */
+function podarHistCats() {
+  const permitidos = new Set();
+  gruposCatHist().forEach((g) => g.nomes.forEach((n) => permitidos.add(g.tipo + '|' + n)));
+  estado.histCats = estado.histCats.filter((k) => permitidos.has(k));
+}
+
+function abrirFiltros() {
+  rascunhoFiltros = {
+    histCats: [...estado.histCats],
+    histTempo: { ...estado.histTempo }
+  };
+  renderFiltrosHist();
+  $('#filtros-fundo').hidden = false;
+  document.body.classList.add('sem-scroll');
+}
+
+function fecharFiltros() {
+  $('#filtros-fundo').hidden = true;
+  rascunhoFiltros = null;
+  libertarScroll();
+}
+
+function aplicarFiltrosHist() {
+  if (rascunhoFiltros) {
+    estado.histCats = rascunhoFiltros.histCats;
+    estado.histTempo = rascunhoFiltros.histTempo;
   }
+  fecharFiltros();
+  renderHistorico();
+}
+
+function renderFiltrosHist() {
+  if (!rascunhoFiltros) return;
+  const t = rascunhoFiltros.histTempo;
+
+  const secoes = gruposCatHist().map((g) => `
+    <h4>${g.tipo === 'gasto' ? 'Categorias de gastos' : 'Origens de ganhos'}</h4>
+    <div class="chips">
+      ${g.nomes.map((n) => {
+        const k = g.tipo + '|' + n;
+        const on = rascunhoFiltros.histCats.includes(k);
+        return `<button type="button" class="chip${on ? ' ativa' : ''}" data-fcat="${esc(k)}">${esc(n)}</button>`;
+      }).join('') || '<p class="vazio">Sem entradas</p>'}
+    </div>`).join('');
+
+  $('#filtros-conteudo').innerHTML = `
+    <div class="def-sec">
+      <h3>Categorias</h3>
+      ${secoes}
+    </div>
+    <div class="def-sec">
+      <h3>Tempo</h3>
+      <div class="chips">
+        ${histTempoOpcoes().map(([id, nome]) =>
+          `<button type="button" class="chip${t.tipo === id ? ' ativa' : ''}" data-ftempo="${id}">${nome}</button>`).join('')}
+      </div>
+      ${t.tipo === 'dia'
+        ? `<div class="def-grelha"><label>Dia
+             <input type="date" class="controlo" id="hf-dia" value="${t.data || hojeISO()}"></label></div>` : ''}
+      ${t.tipo === 'intervalo'
+        ? `<div class="def-grelha">
+             <label>De <input type="date" class="controlo" id="hf-ini" value="${t.ini}"></label>
+             <label>Até <input type="date" class="controlo" id="hf-fim" value="${t.fim}"></label>
+           </div>` : ''}
+    </div>
+    <div class="acoes-folha">
+      <button type="button" class="btn-secundario" id="btn-limpar-filtros">Limpar</button>
+      <button type="button" class="btn-grande azul" id="btn-aplicar-filtros">Aplicar</button>
+    </div>`;
+
+  traduzirDOM($('#filtros-conteudo'));
+}
+
+function onFiltrosClick(ev) {
+  if (!rascunhoFiltros) return;
+  const fcat = ev.target.closest('[data-fcat]');
+  if (fcat) {
+    const k = fcat.dataset.fcat;
+    const i = rascunhoFiltros.histCats.indexOf(k);
+    if (i === -1) rascunhoFiltros.histCats.push(k);
+    else rascunhoFiltros.histCats.splice(i, 1);
+    renderFiltrosHist();
+    return;
+  }
+  const ftempo = ev.target.closest('[data-ftempo]');
+  if (ftempo) {
+    rascunhoFiltros.histTempo.tipo = ftempo.dataset.ftempo;
+    renderFiltrosHist();
+    return;
+  }
+  if (ev.target.closest('#btn-limpar-filtros')) {
+    rascunhoFiltros = {
+      histCats: [],
+      histTempo: { tipo: 'tudo', data: hojeISO(), ini: '', fim: '' }
+    };
+    renderFiltrosHist();
+    return;
+  }
+  if (ev.target.closest('#btn-aplicar-filtros')) { aplicarFiltrosHist(); }
+}
+
+function onFiltrosChange(ev) {
+  if (!rascunhoFiltros) return;
+  const t = rascunhoFiltros.histTempo;
+  if (ev.target.id === 'hf-dia') t.data = ev.target.value || hojeISO();
+  else if (ev.target.id === 'hf-ini') t.ini = ev.target.value;
+  else if (ev.target.id === 'hf-fim') t.fim = ev.target.value;
+  else return;
+  renderFiltrosHist();
 }
 
 /* ---------- 6b. Detalhe de um tipo (ao clicar num gráfico) ---------- */
@@ -1226,8 +1354,8 @@ function abrirDetalheCat(tipo, nome) {
       <div class="total-grande ${tipo === 'gasto' ? 'neg' : 'pos'}">${fmt(total)}</div>
       <div class="linha-est"><span>Registos</span><b>${n}</b></div>
       <div class="linha-est"><span>Média por registo</span><b>${fmt(n ? total / n : 0)}</b></div>
-      ${estado.histCat !== 'todas' && estado.aba === 'historico'
-        ? `<div class="sub">${esc(estado.histCat)}</div>` : ''}
+      ${estado.histCats.length && estado.aba === 'historico'
+        ? `<div class="sub">${esc(estado.histCats.map((k) => k.split('|')[1]).join(', '))}</div>` : ''}
     </div>
     ${n
       ? `<div class="cartao">${movs.map((m) => linhaMov(m, true)).join('')}</div>`
@@ -1241,7 +1369,86 @@ function abrirDetalheCat(tipo, nome) {
 function fecharDetalhe() {
   const el = $('#detalhe-fundo');
   if (el) el.hidden = true;
-  if ($('#modal-fundo').hidden && $('#def-fundo').hidden) document.body.classList.remove('sem-scroll');
+  libertarScroll();
+}
+
+/* ---------- 6c. Movimentos recorrentes (valor fixo, todos os meses) ---------- */
+
+/* Datas devidas de uma regra desde a última gerada até hoje */
+function ocorrenciasDevidas(regra, hoje) {
+  const datas = [];
+  const inicio = regra.inicio || hoje;
+  const fim = dataDe(hoje);
+  let ano = dataDe(inicio).getFullYear();
+  let mes = dataDe(inicio).getMonth(); // 0-11
+  while (ano < fim.getFullYear() || (ano === fim.getFullYear() && mes <= fim.getMonth())) {
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    const d = iso(new Date(ano, mes, Math.min(regra.dia, ultimoDia)));
+    if (d >= inicio && d <= hoje && (!regra.ultimo || d > regra.ultimo)) datas.push(d);
+    mes++; if (mes > 11) { mes = 0; ano++; }
+  }
+  return datas;
+}
+
+/* Cria os movimentos em falta de todas as regras e devolve quantos criou */
+async function gerarRecorrentes() {
+  const hoje = hojeISO();
+  const regras = (await idbTodos('recorrentes')) || [];
+  let total = 0;
+  for (const r of regras) {
+    if (r.ativo === false) continue;
+    const datas = ocorrenciasDevidas(r, hoje);
+    if (!datas.length) continue;
+    for (const d of datas) {
+      await idbAdd('movimentos', {
+        tipo: r.tipo, valor: round2(r.valor), categoria: r.categoria,
+        data: d, nota: r.nota || '', criado: Date.now(), recorrenteId: r.id
+      });
+      total++;
+    }
+    await idbPut('recorrentes', { ...r, ultimo: datas[datas.length - 1] });
+  }
+  return total;
+}
+
+async function adicionarRecorrente() {
+  const tipo = $('#rec-tipo').value;
+  const valor = parseValor($('#rec-valor').value);
+  if (!(valor > 0)) { aviso('Escreve um valor maior que zero.'); return; }
+
+  const dia = Math.min(31, Math.max(1, parseInt($('#rec-dia').value, 10) || 1));
+  const sel = $('#rec-cat');
+  const categoria = (sel && sel.value) || catsDe(tipo)[0];
+  if (!categoria) { aviso('Escolhe uma categoria.'); return; }
+
+  await idbAdd('recorrentes', {
+    tipo, valor: round2(valor), categoria, dia,
+    nota: $('#rec-nota').value.trim(), inicio: hojeISO(), ultimo: null, ativo: true
+  });
+  const n = await gerarRecorrentes();
+  await carregarDados();
+  renderDefinicoes();
+  renderAba(estado.aba);
+  aviso(n ? `Recorrente criado · ${n} movimento(s) adicionado(s) ✓` : 'Recorrente criado ✓');
+}
+
+async function apagarRecorrente(id) {
+  const r = estado.recs.find((x) => x.id === Number(id));
+  if (!r) return;
+  if (!confirm('Apagar este recorrente? Os movimentos já criados mantêm-se.')) return;
+  await idbDel('recorrentes', r.id);
+  await carregarDados();
+  renderDefinicoes();
+  aviso('Recorrente apagado ✓');
+}
+
+/* Lista de opções de categoria/origem no formulário de recorrentes */
+function renderRecCatOptions() {
+  const sel = $('#rec-cat');
+  const tipoEl = $('#rec-tipo');
+  if (!sel || !tipoEl) return;
+  sel.innerHTML = catsDe(tipoEl.value)
+    .map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
 }
 
 /* ---------- 7. Modal de adicionar/editar movimento ---------- */
@@ -1313,7 +1520,14 @@ function renderSelectOrigem(mov) {
 function fecharModal() {
   $('#modal-fundo').hidden = true;
   $('#erro-form').hidden = true;
-  document.body.classList.remove('sem-scroll');
+  libertarScroll();
+}
+
+/* Tira o bloqueio do fundo só quando já não há nenhuma folha aberta */
+function libertarScroll() {
+  const abertas = ['#modal-fundo', '#def-fundo', '#detalhe-fundo', '#filtros-fundo']
+    .some((s) => { const el = $(s); return el && !el.hidden; });
+  if (!abertas) document.body.classList.remove('sem-scroll');
 }
 
 function mostrarErro(msg) {
@@ -1387,7 +1601,7 @@ function abrirDef() {
 
 function fecharDef() {
   $('#def-fundo').hidden = true;
-  document.body.classList.remove('sem-scroll');
+  libertarScroll();
 }
 
 function renderDefinicoes() {
@@ -1416,9 +1630,49 @@ function renderDefinicoes() {
     </section>`;
   };
 
+  const listaRec = (estado.recs || []).map((r) => `
+    <li>
+      <span class="ponto" style="background:${corDe(r.categoria)}"></span>
+      <span class="nome">${esc(r.categoria)} · ${fmt(r.valor)} · dia ${r.dia}</span>
+      <span class="n">${r.tipo === 'gasto' ? '−' : '+'}</span>
+      <button type="button" class="btn-mini perigo" data-accao="del-rec" data-id="${r.id}"
+              aria-label="Apagar recorrente">✕</button>
+    </li>`).join('');
+
+  const secRec = `<section class="def-sec">
+    <h3>Movimentos recorrentes</h3>
+    <ul class="def-lista">${listaRec || '<li><span class="nome">Sem recorrentes</span></li>'}</ul>
+    <div class="def-grelha">
+      <label>O que
+        <select id="rec-tipo" class="controlo">
+          <option value="gasto">Gasto</option>
+          <option value="ganho">Ganho</option>
+        </select>
+      </label>
+      <label>Valor (€)
+        <input type="text" inputmode="decimal" class="controlo" id="rec-valor" placeholder="0,00" autocomplete="off">
+      </label>
+      <label>Dia do mês
+        <input type="number" min="1" max="31" class="controlo" id="rec-dia" value="1">
+      </label>
+    </div>
+    <div class="def-grelha">
+      <label>Categoria/Origem
+        <select id="rec-cat" class="controlo"></select>
+      </label>
+      <label>Explicação (opcional)
+        <input type="text" class="controlo" id="rec-nota" maxlength="140">
+      </label>
+    </div>
+    <button type="button" class="btn-mini azul" data-accao="add-rec">Adicionar recorrente</button>
+    <p class="def-nota">Cria sozinho um movimento fixo todos os meses no dia escolhido
+    (nos meses mais curtos usa o último dia) e, sempre que abres a app, completa o que faltar.</p>
+  </section>`;
+
   $('#def-conteudo').innerHTML =
     seccao('Categorias de gastos', 'gasto', 'Nova categoria') +
     seccao('Origens de ganhos', 'ganho', 'Nova origem') +
+    secRec +
     `<section class="def-sec">
       <h3>Backup dos dados</h3>
       <div class="botoes-def">
@@ -1479,9 +1733,11 @@ function renderDefinicoes() {
     </section>
     <section class="def-sec">
       <h3>Sobre</h3>
-      <p class="def-nota">Carteira v1.1 — tudo guardado apenas neste dispositivo (IndexedDB).
+      <p class="def-nota">Carteira v1.2 — tudo guardado apenas neste dispositivo (IndexedDB).
       Sem contas, sem servidores, funciona offline.</p>
     </section>`;
+
+  renderRecCatOptions();
 }
 
 async function onDefClick(ev) {
@@ -1501,6 +1757,8 @@ async function onDefClick(ev) {
     if (accao === 'adicionar') await adicionarCat(tipo, $('#nova-' + tipo).value);
     else if (accao === 'renomear') await renomearCat(tipo, nome);
     else if (accao === 'apagar') await apagarCat(tipo, nome);
+    else if (accao === 'add-rec') await adicionarRecorrente();
+    else if (accao === 'del-rec') await apagarRecorrente(alvo.dataset.id);
   } catch (err) {
     console.error(err);
     aviso('A operação falhou.');
@@ -1510,6 +1768,10 @@ async function onDefClick(ev) {
 async function onDefChange(ev) {
   if (ev.target.id === 'f-lang') {
     definirIdioma(ev.target.value);
+    return;
+  }
+  if (ev.target.id === 'rec-tipo') {
+    renderRecCatOptions();
     return;
   }
   if (ev.target.id === 'ap-per') {
@@ -1681,7 +1943,8 @@ function exportarJSON() {
     versao: 1,
     exportadoEm: new Date().toISOString(),
     movimentos: estado.movs,
-    categorias: estado.cats
+    categorias: estado.cats,
+    recorrentes: estado.recs || []
   };
   baixar(`carteira-backup-${hojeISO()}.json`, JSON.stringify(dados, null, 2), 'application/json');
   aviso('JSON exportado ✓');
@@ -1907,9 +2170,25 @@ async function importarJSON(ficheiro) {
     : [];
   if (!cats.length) cats = padraoCats();
 
+  const recs = Array.isArray(obj.recorrentes)
+    ? obj.recorrentes
+        .filter((r) => r && typeof r === 'object' && (r.tipo === 'gasto' || r.tipo === 'ganho')
+          && Number.isFinite(Number(r.valor)) && Number(r.valor) > 0 && String(r.categoria || '').trim())
+        .map((r) => ({
+          tipo: r.tipo,
+          valor: round2(Number(r.valor)),
+          categoria: String(r.categoria).trim(),
+          dia: Math.min(31, Math.max(1, parseInt(r.dia, 10) || 1)),
+          nota: String(r.nota || '').slice(0, 140),
+          inicio: /^\d{4}-\d{2}-\d{2}$/.test(r.inicio) ? r.inicio : hojeISO(),
+          ultimo: /^\d{4}-\d{2}-\d{2}$/.test(r.ultimo) ? r.ultimo : null,
+          ativo: r.ativo !== false
+        }))
+    : [];
+
   if (!confirm(`Substituir todos os dados por ${movs.length} movimento(s) do ficheiro?`)) return;
 
-  await idbSubstituir(movs, cats);
+  await idbSubstituir(movs, cats, recs);
   await carregarDados();
   fecharDef();
   renderAba(estado.aba);
@@ -2076,6 +2355,8 @@ async function arrancar() {
   aplicarEstaticos();
   await abrirBD();
   await carregarDados();
+  const nRec = await gerarRecorrentes();
+  if (nRec) await carregarDados();
   bindEventos();
   mostrarAba('gastos');
   iniciarObservadorIdioma();
@@ -2084,6 +2365,7 @@ async function arrancar() {
   travarTela();
   registrarSW();
   pedirPersistencia();
+  if (nRec) aviso(`${nRec} movimento(s) recorrente(s) adicionado(s) ✓`);
 }
 
 function pedirPersistencia() {
@@ -2127,15 +2409,12 @@ function bindEventos() {
   $('#btn-fechar-detalhe').addEventListener('click', fecharDetalhe);
   $('#detalhe-fundo').addEventListener('click', (e) => { if (e.target.id === 'detalhe-fundo') fecharDetalhe(); });
 
-  /* Datas do filtro temporal do Histórico */
-  const folhaTempo = $('#hist-tempo-folha');
-  if (folhaTempo) folhaTempo.addEventListener('change', (e) => {
-    if (e.target.id === 'hist-dia') estado.histTempo.data = e.target.value || hojeISO();
-    else if (e.target.id === 'hist-ini') estado.histTempo.ini = e.target.value;
-    else if (e.target.id === 'hist-fim') estado.histTempo.fim = e.target.value;
-    else return;
-    renderHistorico();
-  });
+  /* Painel de filtros do Histórico */
+  $('#btn-filtros-hist').addEventListener('click', abrirFiltros);
+  $('#btn-fechar-filtros').addEventListener('click', fecharFiltros);
+  $('#filtros-fundo').addEventListener('click', (e) => { if (e.target.id === 'filtros-fundo') fecharFiltros(); });
+  $('#filtros-conteudo').addEventListener('click', onFiltrosClick);
+  $('#filtros-conteudo').addEventListener('change', onFiltrosChange);
 
   $$('.tab-btn').forEach((b) => b.addEventListener('click', () => mostrarAba(b.dataset.aba)));
 
@@ -2160,13 +2439,12 @@ function bindEventos() {
     if (ok) { aplicarIntervalo(ok.dataset.aba); return; }
 
     const chipHist = e.target.closest('[data-hist]');
-    if (chipHist) { estado.hist = chipHist.dataset.hist; renderHistorico(); return; }
-
-    const chipCat = e.target.closest('[data-histcat]');
-    if (chipCat) { estado.histCat = chipCat.dataset.histcat; renderHistorico(); return; }
-
-    const chipTempo = e.target.closest('[data-histtempo]');
-    if (chipTempo) { estado.histTempo.tipo = chipTempo.dataset.histtempo; renderHistorico(); return; }
+    if (chipHist) {
+      estado.hist = chipHist.dataset.hist;
+      podarHistCats();
+      renderHistorico();
+      return;
+    }
 
     /* Clicar num tipo (legenda do donut ou distribuição do balanço) → detalhe */
     const toca = e.target.closest('[data-dtipo][data-cat]');
@@ -2180,7 +2458,7 @@ function bindEventos() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { fecharDetalhe(); fecharModal(); fecharDef(); }
+    if (e.key === 'Escape') { fecharFiltros(); fecharDetalhe(); fecharModal(); fecharDef(); }
   });
 
   /* Actualiza as cores dos gráficos se o utilizador mudar claro/escuro */

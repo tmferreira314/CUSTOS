@@ -218,6 +218,19 @@ svg.grafico { width: 100%; height: auto; display: block; }
 .toca:active { opacity: .6; }
 .legenda-linha.toca { padding: 6px 4px; border-radius: 8px; }
 .dist-item { margin-bottom: 12px; }
+
+/* Barra de filtros do Histórico */
+.filtros-hist-barra { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.filtros-hist-barra .chips { flex: 1 1 auto; }
+.filtros-hist-btn { position: relative; flex: 0 0 auto; }
+.badge {
+  position: absolute; top: -7px; right: -7px; min-width: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--acento); color: #fff;
+  font-size: 11px; line-height: 18px; text-align: center; font-weight: 600;
+}
+.filtros-resumo { font-size: 13px; color: var(--texto2); margin: 0 0 8px; }
+.btn-grande.azul { background: var(--acento); }
+.marca-rec { color: var(--acento); font-weight: 700; }
 .ponto { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
 .ponto.linha-legenda { width: 16px; height: 3px; border-radius: 2px; }
 .legenda-nome { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
