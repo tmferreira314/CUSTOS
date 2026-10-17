@@ -86,7 +86,7 @@ function tr(chave) {
 /* Dicionário de frases em português → inglês, aplicado ao texto já desenhado.
    Frases mais longas primeiro, para não partir expressões compostas. */
 const PT_EN = {
-  'Carteira v1.4.1 —': 'Wallet v1.4.1 —',
+  'Carteira v1.4.2 —': 'Wallet v1.4.2 —',
   'Orçamentos mensais': 'Monthly budgets',
   'Resumo': 'Summary',
   'Orçamentos do mês': 'Monthly budgets',
@@ -1292,7 +1292,7 @@ function imprimirRelatorio() {
     <h2>Movimentos (${doMes.length})</h2>
     <table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Nota</th><th>Valor</th></tr></thead>
       <tbody>${doMes.map((x) => `<tr><td>${x.data}</td><td>${x.tipo === 'gasto' ? 'Gasto' : 'Ganho'}</td><td>${esc(x.categoria)}</td><td>${esc(x.nota || '')}</td><td class="${x.tipo === 'gasto' ? 'rel-neg' : 'rel-pos'}">${x.tipo === 'gasto' ? '−' : '+'}${fmt(x.valor)}</td></tr>`).join('')}</tbody></table>
-    <p style="margin-top:16px;font-size:11px;color:#666">Gerado em ${dtLongo.format(new Date())} · Carteira v1.4.1</p>`;
+    <p style="margin-top:16px;font-size:11px;color:#666">Gerado em ${dtLongo.format(new Date())} · Carteira v1.4.2</p>`;
 
   traduzirDOM($('#impressao'));
   try { window.print(); } catch (err) { console.warn(err); }
@@ -2053,7 +2053,7 @@ function renderRecCatOptions() {
 
 /* ---------- 7. Modal de adicionar/editar movimento ---------- */
 
-const modal = { tipo: 'gasto', id: null, cat: '' };
+const modal = { tipo: 'gasto', id: null, cat: '', origemTexto: '' };
 
 function abrirModal(tipo, mov) {
   fecharDetalhe();
@@ -2061,6 +2061,7 @@ function abrirModal(tipo, mov) {
   modal.tipo = tipo;
   modal.id = edicao ? mov.id : null;
   modal.cat = mov ? mov.categoria : (catsDe(tipo)[0] || '');
+  modal.origemTexto = '';
 
   $('#erro-form').hidden = true;
   $('#modal-titulo').textContent = (edicao ? 'Editar ' : 'Adicionar ') + (tipo === 'gasto' ? 'gasto' : 'ganho');
@@ -2075,7 +2076,7 @@ function abrirModal(tipo, mov) {
   $('#campo-categoria').hidden = !ehGasto;
   $('#campo-origem').hidden = ehGasto;
   if (ehGasto) renderChipsCat();
-  else renderSelectOrigem(mov);
+  else definirOrigem(modal.cat);
 
   $('#btn-apagar-mov').hidden = !edicao;
   $('#btn-duplicar-mov').hidden = !edicao;
@@ -2095,38 +2096,41 @@ function renderChipsCat() {
   ).join('') + `<button type="button" class="chip grande novo" data-novo="gasto">＋ Novo tipo</button>`;
 }
 
-function renderSelectOrigem(mov) {
-  const sel = $('#f-origem');
+function renderChipsOrigem() {
+  const lista = catsDe('ganho');
+  if (!lista.some((n) => n.toLowerCase() === OUTRO.toLowerCase())) lista.push(OUTRO);
+  if (!lista.some((n) => n === modal.cat)) modal.cat = lista[0] || OUTRO;
+
+  $('#chips-origem').innerHTML = lista.map((nome) =>
+    `<button type="button" class="chip grande${nome === modal.cat ? ' ativa' : ''}" data-cat="${esc(nome)}">${esc(nome)}</button>`
+  ).join('') + `<button type="button" class="chip grande novo" data-novo="ganho">＋ Nova origem</button>`;
+
+  const ehOutro = String(modal.cat).toLowerCase() === OUTRO.toLowerCase();
   const txt = $('#f-origem-texto');
-  let lista = catsDe('ganho');
-  if (!lista.some((n) => n.toLowerCase() === OUTRO.toLowerCase())) lista = [...lista, OUTRO];
+  txt.hidden = !ehOutro;
+  txt.value = ehOutro ? (modal.origemTexto || '') : '';
+}
 
-  sel.innerHTML = lista.map((nome) => `<option value="${esc(nome)}">${esc(nome)}</option>`).join('') + `<option value="__novo__">＋ Nova origem…</option>`;
-
-  const cat = mov ? mov.categoria : '';
-  const existe = cat && lista.some((n) => n === cat);
-  if (cat && existe) {
-    sel.value = cat;
-    txt.hidden = true;
-    txt.value = '';
-  } else if (cat) { // origem escrita à mão antes
-    sel.value = OUTRO;
-    txt.value = cat;
-    txt.hidden = false;
+/* Define a origem escolhida (nomes fora da lista → chip "Outro" + texto) */
+function definirOrigem(nome) {
+  const lista = catsDe('ganho');
+  const conhecida = nome && (lista.some((n) => n === nome)
+    || String(nome).toLowerCase() === OUTRO.toLowerCase());
+  if (conhecida || !nome) {
+    modal.origemTexto = '';
+    modal.cat = nome || lista[0] || OUTRO;
   } else {
-    sel.value = lista[0] || OUTRO;
-    txt.value = '';
-    txt.hidden = true;
+    modal.origemTexto = nome;
+    modal.cat = OUTRO;
   }
+  renderChipsOrigem();
 }
 
 /* Categoria/origem atualmente escolhida no formulário */
 function categoriaAtualModal(tipo) {
   if (tipo === 'gasto') return modal.cat || catsDe('gasto')[0] || '';
-  const v = $('#f-origem').value;
-  if (String(v).toLowerCase() === OUTRO.toLowerCase()) return $('#f-origem-texto').value.trim() || OUTRO;
-  if (v === '__novo__') return OUTRO;
-  return v;
+  if (String(modal.cat).toLowerCase() === OUTRO.toLowerCase()) return $('#f-origem-texto').value.trim() || OUTRO;
+  return modal.cat || catsDe('ganho')[0] || '';
 }
 
 /* Abre um novo movimento (modo adicionar) pré-preenchido com os dados dados */
@@ -2154,7 +2158,7 @@ function repetirUltimo() {
   $('#f-valor').value = String(ultimo.valor.toFixed(2)).replace('.', ',');
   $('#f-nota').value = ultimo.nota || '';
   if (tipo === 'gasto') { modal.cat = ultimo.categoria; renderChipsCat(); }
-  else renderSelectOrigem({ categoria: ultimo.categoria });
+  else definirOrigem(ultimo.categoria);
   aviso('Preenchido com o último movimento — confirma e guarda.');
 }
 
@@ -2188,10 +2192,8 @@ async function guardarMovimento(ev) {
     categoria = modal.cat || catsDe('gasto')[0];
     if (!categoria) { aviso('Cria uma categoria de gastos primeiro (Definições).'); return; }
   } else {
-    const sel = $('#f-origem').value;
-    categoria = sel.toLowerCase() === OUTRO.toLowerCase()
-      ? ($('#f-origem-texto').value.trim() || OUTRO)
-      : (sel === '__novo__' ? OUTRO : sel);
+    categoria = categoriaAtualModal('ganho');
+    if (!categoria) { aviso('Cria uma origem de ganhos primeiro (Definições).'); return; }
   }
 
   const data = $('#f-data').value || hojeISO();
@@ -2411,7 +2413,7 @@ function renderDefinicoes() {
     </section>
     <section class="def-sec">
       <h3>Sobre</h3>
-      <p class="def-nota">Carteira v1.4.1 — tudo guardado apenas neste dispositivo (IndexedDB).
+      <p class="def-nota">Carteira v1.4.2 — tudo guardado apenas neste dispositivo (IndexedDB).
       Sem contas, sem servidores, funciona offline.</p>
     </section>`;
 
@@ -2499,17 +2501,17 @@ async function adicionarCat(tipo, nome) {
 async function criarCatRapida(tipo) {
   const pergunta = tipo === 'gasto' ? 'Nome do novo tipo de gasto:' : 'Nome da nova origem de ganho:';
   const nome = String(prompt(pergunta) || '').trim();
-  if (!nome) { if (tipo === 'ganho') renderSelectOrigem(null); return; }
+  if (!nome) { if (tipo === 'ganho') renderChipsOrigem(); return; }
   if (catsDe(tipo).some((n) => n.toLowerCase() === nome.toLowerCase())) {
     aviso('Já existe uma entrada com esse nome.');
-    if (tipo === 'ganho') renderSelectOrigem(null);
+    if (tipo === 'ganho') renderChipsOrigem();
     return;
   }
   try {
     await idbAdd('categorias', { nome, tipo });
     await carregarDados();
     if (tipo === 'gasto') { modal.cat = nome; renderChipsCat(); }
-    else renderSelectOrigem({ categoria: nome });
+    else definirOrigem(nome);
     renderAba(estado.aba);
     aviso('Novo tipo adicionado ✓');
   } catch (err) {
@@ -3111,13 +3113,15 @@ function bindEventos() {
     Promise.resolve(fn()).catch((err) => console.error(err));
   });
 
-  /* Origem "Outro" → mostra a caixa de texto (e "＋ Nova origem" → cria) */
-  $('#f-origem').addEventListener('change', () => {
-    const v = $('#f-origem').value;
-    if (v === '__novo__') { criarCatRapida('ganho'); return; }
-    const ehOutro = v.toLowerCase() === OUTRO.toLowerCase();
-    $('#f-origem-texto').hidden = !ehOutro;
-    if (ehOutro) setTimeout(() => $('#f-origem-texto').focus(), 50);
+  /* Chips da origem do ganho dentro do modal (igual aos do tipo de gasto) */
+  $('#chips-origem').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    if (chip.dataset.novo) { criarCatRapida('ganho'); return; }
+    definirOrigem(chip.dataset.cat);
+    if (String(chip.dataset.cat).toLowerCase() === OUTRO.toLowerCase()) {
+      setTimeout(() => $('#f-origem-texto').focus(), 50);
+    }
   });
 
   /* Chips do tipo de gasto dentro do modal */
