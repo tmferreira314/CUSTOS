@@ -86,7 +86,7 @@ function tr(chave) {
 /* Dicionário de frases em português → inglês, aplicado ao texto já desenhado.
    Frases mais longas primeiro, para não partir expressões compostas. */
 const PT_EN = {
-  'Carteira v1.4 —': 'Wallet v1.4 —',
+  'Carteira v1.4.1 —': 'Wallet v1.4.1 —',
   'Orçamentos mensais': 'Monthly budgets',
   'Resumo': 'Summary',
   'Orçamentos do mês': 'Monthly budgets',
@@ -1292,7 +1292,7 @@ function imprimirRelatorio() {
     <h2>Movimentos (${doMes.length})</h2>
     <table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Nota</th><th>Valor</th></tr></thead>
       <tbody>${doMes.map((x) => `<tr><td>${x.data}</td><td>${x.tipo === 'gasto' ? 'Gasto' : 'Ganho'}</td><td>${esc(x.categoria)}</td><td>${esc(x.nota || '')}</td><td class="${x.tipo === 'gasto' ? 'rel-neg' : 'rel-pos'}">${x.tipo === 'gasto' ? '−' : '+'}${fmt(x.valor)}</td></tr>`).join('')}</tbody></table>
-    <p style="margin-top:16px;font-size:11px;color:#666">Gerado em ${dtLongo.format(new Date())} · Carteira v1.4</p>`;
+    <p style="margin-top:16px;font-size:11px;color:#666">Gerado em ${dtLongo.format(new Date())} · Carteira v1.4.1</p>`;
 
   traduzirDOM($('#impressao'));
   try { window.print(); } catch (err) { console.warn(err); }
@@ -2411,7 +2411,7 @@ function renderDefinicoes() {
     </section>
     <section class="def-sec">
       <h3>Sobre</h3>
-      <p class="def-nota">Carteira v1.4 — tudo guardado apenas neste dispositivo (IndexedDB).
+      <p class="def-nota">Carteira v1.4.1 — tudo guardado apenas neste dispositivo (IndexedDB).
       Sem contas, sem servidores, funciona offline.</p>
     </section>`;
 

@@ -4,6 +4,9 @@
 
 * { box-sizing: border-box; }
 
+/* O atributo hidden tem de vencer qualquer display definido por classes */
+[hidden] { display: none !important; }
+
 /* Cores do modo claro */
 :root {
   --fundo: #f2f2f7;

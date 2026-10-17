@@ -2,7 +2,7 @@
    e serve-os da cache quando não há internet.
    Todos os caminhos são relativos → funcionam num subcaminho (GitHub Pages). */
 
-const CACHE = 'carteira-v4';
+const CACHE = 'carteira-v5';
 
 const FICHEIROS = [
   './',
