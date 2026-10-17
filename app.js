@@ -27,6 +27,7 @@ const OUTRO = 'Outro';
 const CORES = ['#0a84ff', '#ff9f0a', '#30d158', '#ff453a', '#bf5af2', '#5ac8fa', '#ffd60a', '#64d2ff', '#ff375f', '#ac8e68'];
 
 const PERIODOS = [
+  { id: 'dia', nome: 'Dia' },
   { id: 'semana', nome: 'Semana' },
   { id: 'mes', nome: 'Mês' },
   { id: 'ano', nome: 'Ano' },
@@ -39,7 +40,7 @@ const PERIODOS = [
 let LANG = 'pt';
 try { LANG = localStorage.getItem('carteira-lang') === 'en' ? 'en' : 'pt'; } catch (e) { LANG = 'pt'; }
 
-let eurFmt, pctFmt, dtLongo, dtCurto, dtMes, dtMesAno;
+let eurFmt, pctFmt, dtLongo, dtCurto, dtSemana, dtMes, dtMesAno;
 
 /* Cria os formatos de número/data consoante o idioma */
 function criarFormatos() {
@@ -48,6 +49,7 @@ function criarFormatos() {
   pctFmt = new Intl.NumberFormat(loc, { maximumFractionDigits: 1 });
   dtLongo = new Intl.DateTimeFormat(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   dtCurto = new Intl.DateTimeFormat(loc, { day: '2-digit', month: 'short' });
+  dtSemana = new Intl.DateTimeFormat(loc, { weekday: 'short' });
   dtMes = new Intl.DateTimeFormat(loc, { month: 'short' });
   dtMesAno = new Intl.DateTimeFormat(loc, { month: 'short', year: '2-digit' });
 }
@@ -84,9 +86,7 @@ function tr(chave) {
 /* Dicionário de frases em português → inglês, aplicado ao texto já desenhado.
    Frases mais longas primeiro, para não partir expressões compostas. */
 const PT_EN = {
-  'Carteira v1.1 — tudo guardado apenas neste dispositivo (IndexedDB). Sem contas, sem servidores, funciona offline.':
-    'Wallet v1.1 — everything stored only on this device (IndexedDB). No accounts, no servers, works offline.',
-  'Carteira v1.2 —': 'Wallet v1.2 —',
+  'Carteira v1.3 —': 'Wallet v1.3 —',
   'O JSON substitui tudo (restauro completo). O CSV acrescenta movimentos aos que já tens. No iPhone, os ficheiros ficam em "Ficheiros → Descarregamentos".':
     'JSON replaces everything (full restore). CSV adds movements to the ones you already have. On iPhone, files are saved in "Files → Downloads".',
   'Apaga apenas os movimentos do período escolhido. Para apagar um movimento em particular, abre-o no Histórico (ou numa lista) e usa "Apagar".':
@@ -154,6 +154,9 @@ const PT_EN = {
   'Gastos': 'Expenses', 'Ganhos': 'Income', 'Balanço': 'Balance', 'Histórico': 'History',
   'Semana': 'Week', 'Mês': 'Month', 'Ano': 'Year', 'Sempre': 'All time', 'Intervalo': 'Range',
   'Dia': 'Day', 'Total': 'Total', 'Período': 'Period', 'Registos': 'Records',
+  'Por dia': 'By day', 'Gastos por dia': 'Expenses by day', 'Ganhos por dia': 'Income by day',
+  'Ganhos, gastos e saldo por dia': 'Income, expenses and balance by day',
+  'Escolhe o dia.': 'Choose the day.',
   'Tudo': 'All', 'Todas': 'All',
   'categoria': 'category', 'origem': 'source',
   'Comida': 'Food', 'Festas': 'Parties', 'Viagens': 'Travel', 'Roupa': 'Clothes',
@@ -466,6 +469,8 @@ const estado = {
   aba: 'gastos',
   periodo: { gastos: 'mes', ganhos: 'mes', balanco: 'mes' },
   custom: { gastos: null, ganhos: null, balanco: null },
+  /* Dia escolhido no filtro "Dia" de cada aba */
+  dia: { gastos: hojeISO(), ganhos: hojeISO(), balanco: hojeISO() },
   hist: 'tudo',
   /* Filtros do Histórico: categorias (multi) e tempo */
   histCats: [],
@@ -517,7 +522,11 @@ function periodoDe(aba) {
   const d = dataDe(hoje);
   let ini, fim, prev = null, gran = 'dia';
 
-  if (tipo === 'semana') {
+  if (tipo === 'dia') {
+    const sel = (estado.dia && estado.dia[aba]) || hoje;
+    ini = fim = sel;
+    prev = { inicio: addDias(sel, -1), fim: addDias(sel, -1) };
+  } else if (tipo === 'semana') {
     const dow = (d.getDay() + 6) % 7; // segunda-feira = 0
     ini = addDias(hoje, -dow);
     fim = addDias(ini, 6);
@@ -830,6 +839,12 @@ function renderFiltros(aba) {
       `<button type="button" class="chip${p.id === atual ? ' ativa' : ''}" data-per="${p.id}" data-aba="${aba}">${p.nome}</button>`
     ).join('') +
     '</div>' +
+    (atual === 'dia'
+      ? `<div class="intervalo">
+          <input type="date" class="controlo" id="dia-${aba}" value="${estado.dia[aba]}" aria-label="Dia">
+          <button type="button" class="btn-mini azul" data-acao="aplicar-dia" data-aba="${aba}">OK</button>
+        </div>`
+      : '') +
     (atual === 'intervalo'
       ? `<div class="intervalo">
           <input type="date" class="controlo" id="ini-${aba}" value="${c.inicio}" aria-label="Data de início">
@@ -850,6 +865,13 @@ function aplicarIntervalo(aba) {
   renderAba(aba);
 }
 
+function aplicarDia(aba) {
+  const v = $('#dia-' + aba).value;
+  if (!v) { aviso('Escolhe o dia.'); return; }
+  estado.dia[aba] = v;
+  renderAba(aba);
+}
+
 /* Linha de movimento (usada nas listas) */
 function linhaMov(m, mostrarData) {
   const pos = m.tipo === 'ganho';
@@ -865,6 +887,79 @@ function linhaMov(m, mostrarData) {
     <span class="meio"><span class="t">${m.recorrenteId ? '<span class="marca-rec" aria-label="Recorrente">↻</span> ' : ''}${esc(m.categoria)}</span><span class="n">${sub}</span></span>
     <span class="val ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmt(m.valor)}</span>
   </button>`;
+}
+
+/* Soma gastos/ganhos agrupados por dia, do mais recente para o mais antigo */
+function resumoPorDia(p) {
+  const mapa = new Map();
+  emPeriodo(estado.movs, p).forEach((m) => {
+    let d = mapa.get(m.data);
+    if (!d) { d = { data: m.data, gastos: 0, ganhos: 0, n: 0 }; mapa.set(m.data, d); }
+    if (m.tipo === 'gasto') d.gastos += m.valor; else d.ganhos += m.valor;
+    d.n++;
+  });
+  return [...mapa.values()].sort((a, b) => b.data.localeCompare(a.data));
+}
+
+/* Cartão "por dia". modo: 'gasto' | 'ganho' | 'ambos' (balanço) */
+const MAX_DIAS_TABELA = 60; // limita o comprimento em períodos muito longos
+function cartaoPorDia(aba, p, modo) {
+  if (p.inicio === p.fim) return ''; // um só dia → não faz sentido uma tabela diária
+  const lista = resumoPorDia(p);
+  if (!lista.length) return '';
+
+  const visivel = lista.slice(0, MAX_DIAS_TABELA);
+  const capado = lista.length > MAX_DIAS_TABELA;
+  const dia = (d) => {
+    const dt = dataDe(d);
+    return `${dtSemana.format(dt).slice(0, 3)} ${dtCurto.format(dt)}`;
+  };
+  const somaG = round2(lista.reduce((s, x) => s + x.gastos, 0));
+  const somaN = round2(lista.reduce((s, x) => s + x.ganhos, 0));
+
+  let titulo, cabCSV, linhasCSV, cabecalho, corpo, rodape;
+  if (modo === 'gasto') {
+    titulo = 'Gastos por dia';
+    cabCSV = ['data', 'gastos'];
+    linhasCSV = lista.map((x) => [x.data, round2(x.gastos)]);
+    cabecalho = '<tr><th>Dia</th><th>Gastos</th></tr>';
+    corpo = visivel.map((x) => `<tr><td>${dia(x.data)}</td><td class="neg">${fmt(x.gastos)}</td></tr>`).join('');
+    rodape = `<tr class="tabela-total"><td>Total</td><td class="neg">${fmt(somaG)}</td></tr>`;
+  } else if (modo === 'ganho') {
+    titulo = 'Ganhos por dia';
+    cabCSV = ['data', 'ganhos'];
+    linhasCSV = lista.map((x) => [x.data, round2(x.ganhos)]);
+    cabecalho = '<tr><th>Dia</th><th>Ganhos</th></tr>';
+    corpo = visivel.map((x) => `<tr><td>${dia(x.data)}</td><td class="pos">${fmt(x.ganhos)}</td></tr>`).join('');
+    rodape = `<tr class="tabela-total"><td>Total</td><td class="pos">${fmt(somaN)}</td></tr>`;
+  } else {
+    titulo = 'Ganhos, gastos e saldo por dia';
+    cabCSV = ['data', 'ganhos', 'gastos', 'saldo'];
+    linhasCSV = lista.map((x) => [x.data, round2(x.ganhos), round2(x.gastos), round2(x.ganhos - x.gastos)]);
+    cabecalho = '<tr><th>Dia</th><th>Ganhos</th><th>Gastos</th><th>Saldo</th></tr>';
+    corpo = visivel.map((x) => {
+      const s = round2(x.ganhos - x.gastos);
+      return `<tr><td>${dia(x.data)}</td><td class="pos">${fmt(x.ganhos)}</td><td class="neg">${fmt(x.gastos)}</td>
+        <td class="${s >= 0 ? 'pos' : 'neg'}">${s >= 0 ? '+' : '−'}${fmt(Math.abs(s))}</td></tr>`;
+    }).join('');
+    const sTot = round2(somaN - somaG);
+    rodape = `<tr class="tabela-total"><td>Total</td><td class="pos">${fmt(somaN)}</td><td class="neg">${fmt(somaG)}</td>
+      <td class="${sTot >= 0 ? 'pos' : 'neg'}">${sTot >= 0 ? '+' : '−'}${fmt(Math.abs(sTot))}</td></tr>`;
+  }
+
+  const chave = aba + '-dias';
+  registarExportador(chave, aba + '-por-dia', cabCSV, linhasCSV);
+  return `<div class="cartao">
+    <h3>${titulo} <span class="sub">${lista.length} ${LANG === 'en' ? (lista.length === 1 ? 'day' : 'days') : (lista.length === 1 ? 'dia' : 'dias')}</span></h3>
+    ${barraExportar(chave)}
+    <table class="tabela tabela-dias">
+      <thead>${cabecalho}</thead>
+      <tbody>${corpo}${rodape}</tbody>
+    </table>
+    ${capado
+      ? `<p class="def-nota">A mostrar os últimos ${MAX_DIAS_TABELA} dias com movimentos; a linha de total inclui todo o período.</p>`
+      : ''}
+  </div>`;
 }
 
 /* ----- Estatísticas de Gastos e de Ganhos (mesma estrutura) ----- */
@@ -906,6 +1001,9 @@ function renderStats(tipo) {
       <div class="linha-est"><span>Registos</span><b>${n}</b></div>
       <div class="linha-est"><span>Média por registo</span><b>${fmt(media)}</b></div>
     </div>`,
+
+    /* Tabela dia a dia (gastos ou ganhos) */
+    cartaoPorDia(aba, p, tipo),
 
     /* Total por categoria/origem (donut + percentagens) */
     n
@@ -1017,6 +1115,9 @@ function renderBalanco() {
         <div class="mini"><span class="v neg">${fmt(totGas)}</span><span class="r">Gastos</span></div>
       </div>
     </div>`),
+
+    /* Tabela dia a dia: ganhos, gastos e saldo */
+    cartaoPorDia('balanco', p, 'ambos'),
 
     /* Gráfico: barras agrupadas + saldo acumulado */
     (registarExportador('balanco-evolucao', 'balanco-evolucao', ['periodo','ganhos','gastos','saldo'], baldes.map((b) => [b.rotulo, b.ganhos, b.gastos, round2(b.ganhos - b.gastos)])),
@@ -1733,7 +1834,7 @@ function renderDefinicoes() {
     </section>
     <section class="def-sec">
       <h3>Sobre</h3>
-      <p class="def-nota">Carteira v1.2 — tudo guardado apenas neste dispositivo (IndexedDB).
+      <p class="def-nota">Carteira v1.3 — tudo guardado apenas neste dispositivo (IndexedDB).
       Sem contas, sem servidores, funciona offline.</p>
     </section>`;
 
@@ -2418,6 +2519,15 @@ function bindEventos() {
 
   $$('.tab-btn').forEach((b) => b.addEventListener('click', () => mostrarAba(b.dataset.aba)));
 
+  /* Filtro "Dia": aplica logo que se escolhe a data */
+  document.addEventListener('change', (e) => {
+    if (e.target && /^dia-(gastos|ganhos|balanco)$/.test(e.target.id)) {
+      const aba = e.target.id.slice(4);
+      estado.dia[aba] = e.target.value || hojeISO();
+      renderAba(aba);
+    }
+  });
+
   /* Definições (conteúdo recriado dinamicamente → delegação) */
   $('#def-conteudo').addEventListener('click', onDefClick);
   $('#def-conteudo').addEventListener('change', onDefChange);
@@ -2437,6 +2547,9 @@ function bindEventos() {
 
     const ok = e.target.closest('[data-acao="aplicar"]');
     if (ok) { aplicarIntervalo(ok.dataset.aba); return; }
+
+    const okDia = e.target.closest('[data-acao="aplicar-dia"]');
+    if (okDia) { aplicarDia(okDia.dataset.aba); return; }
 
     const chipHist = e.target.closest('[data-hist]');
     if (chipHist) {

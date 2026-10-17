@@ -200,6 +200,14 @@ button { touch-action: manipulation; }
 .tabela thead th { font-size: 11px; text-transform: uppercase; color: var(--texto2); }
 .tabela tr:last-child td { border-bottom: none; }
 
+/* Tabela "por dia" (aba Gastos/Ganhos/Balanço) */
+.tabela-dias th:first-child, .tabela-dias td:first-child { min-width: 76px; }
+.tabela-dias tr.tabela-total td {
+  font-weight: 700; border-top: 2px solid var(--linha); border-bottom: none;
+  padding-top: 10px; color: var(--texto);
+}
+.tabela-dias tr.tabela-total td:first-child { color: var(--texto); }
+
 .vazio { text-align: center; color: var(--texto2); padding: 24px 12px; font-size: 14px; margin: 0; }
 
 /* ---------- Gráficos (SVG próprio) ---------- */
