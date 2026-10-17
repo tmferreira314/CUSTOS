@@ -31,7 +31,7 @@
 
   <!-- Cabeçalho -->
   <header class="topo">
-    <h1 id="titulo-aba">Gastos</h1>
+    <h1 id="titulo-aba">Resumo</h1>
     <button type="button" class="btn-icone" id="btn-definicoes" aria-label="Definições" data-i18n-aria="titulo_definicoes">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 8h9"/><path d="M19 8h1"/><circle cx="16" cy="8" r="2.5"/>
@@ -41,8 +41,13 @@
   </header>
 
   <main class="conteudo">
+    <!-- ===== ABA RESUMO (início) ===== -->
+    <section id="aba-resumo" class="aba ativa" aria-label="Resumo">
+      <div id="stats-resumo" class="cartoes"></div>
+    </section>
+
     <!-- ===== ABA GASTOS ===== -->
-    <section id="aba-gastos" class="aba ativa" aria-label="Gastos">
+    <section id="aba-gastos" class="aba" aria-label="Gastos">
       <button type="button" class="btn-grande vermelho" id="btn-add-gasto">＋ Adicionar gasto</button>
       <div class="filtros" id="filtros-gastos"></div>
       <div id="stats-gastos" class="cartoes"></div>
@@ -77,7 +82,11 @@
 
   <!-- ===== Barra de abas ===== -->
   <nav class="abas" aria-label="Navegação principal">
-    <button type="button" class="tab-btn ativa" data-aba="gastos">
+    <button type="button" class="tab-btn ativa" data-aba="resumo">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/></svg>
+      <span data-i18n="resumo">Resumo</span>
+    </button>
+    <button type="button" class="tab-btn" data-aba="gastos">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v14"/><path d="m6 13 6 6 6-6"/></svg>
       <span data-i18n="gastos">Gastos</span>
     </button>
@@ -100,16 +109,25 @@
     <div class="folha" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
       <div class="folha-cabecalho">
         <h2 id="modal-titulo" data-i18n="add_gasto">Adicionar gasto</h2>
-        <button type="button" class="btn-icone" id="btn-fechar-modal" aria-label="Fechar" data-i18n-aria="fechar">✕</button>
+        <span class="cab-acoes">
+          <button type="button" class="btn-icone" id="btn-duplicar-mov" hidden
+                  aria-label="Duplicar" data-i18n-aria="duplicar" title="Duplicar">⧉</button>
+          <button type="button" class="btn-icone" id="btn-fechar-modal" aria-label="Fechar" data-i18n-aria="fechar">✕</button>
+        </span>
       </div>
 
       <form id="form-mov" novalidate>
-        <label class="campo">
-          <span id="rot-valor" data-i18n="valor_gasto">Valor gasto (€)</span>
+        <div class="campo">
+          <div class="rot-linha">
+            <span id="rot-valor" data-i18n="valor_gasto">Valor gasto (€)</span>
+            <button type="button" class="btn-mini" id="btn-repetir-ultimo" hidden
+                    data-i18n="repetir_ultimo">Repetir último</button>
+          </div>
           <input id="f-valor" class="controlo" type="text" inputmode="decimal" autocomplete="off"
+                 aria-labelledby="rot-valor"
                  autocorrect="off" autocapitalize="off" spellcheck="false"
                  enterkeyhint="done" placeholder="0,00">
-        </label>
+        </div>
 
         <!-- Tipo de gasto (chips) -->
         <div class="campo" id="campo-categoria">
@@ -182,6 +200,9 @@
 
   <!-- Aviso temporário (toast) -->
   <div id="aviso" class="aviso" hidden></div>
+
+  <!-- Relatório para impressão / PDF (invisível no ecrã) -->
+  <div id="impressao" aria-hidden="true"></div>
 
   <script src="app.js"></script>
 </body>

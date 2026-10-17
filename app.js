@@ -60,18 +60,18 @@ const TRAD = {
   pt: {
     titulo_app: 'Carteira — Gastos e Ganhos',
     descricao: 'Regista os teus gastos e ganhos pessoais. Funciona 100% offline, sem contas.',
-    gastos: 'Gastos', ganhos: 'Ganhos', balanco: 'Balanço', historico: 'Histórico',
+    gastos: 'Gastos', ganhos: 'Ganhos', balanco: 'Balanço', historico: 'Histórico', resumo: 'Resumo',
     titulo_definicoes: 'Definições', fechar: 'Fechar',
     add_gasto: 'Adicionar gasto', valor_gasto: 'Valor gasto (€)', tipo_gasto: 'Tipo de gasto',
     origem_ganho: 'Origem do ganho', escreve_origem: 'Escreve a origem', data: 'Data',
     explicacao: 'Explicação (opcional)', exemplo_nota: 'Ex.: almoço com amigos',
     apagar: 'Apagar', guardar: 'Guardar', precisa_js: 'Esta app precisa de JavaScript activo.',
-    filtros: 'Filtros'
+    filtros: 'Filtros', repetir_ultimo: 'Repetir último', duplicar: 'Duplicar'
   },
   en: {
     titulo_app: 'Wallet — Expenses and Income',
     descricao: 'Track your personal expenses and income. Works 100% offline, no accounts.',
-    gastos: 'Expenses', ganhos: 'Income', balanco: 'Balance', historico: 'History',
+    gastos: 'Expenses', ganhos: 'Income', balanco: 'Balance', historico: 'History', resumo: 'Summary',
     titulo_definicoes: 'Settings', fechar: 'Close',
     add_gasto: 'Add expense', valor_gasto: 'Amount spent (€)', tipo_gasto: 'Type of expense',
     origem_ganho: 'Source of income', escreve_origem: 'Type the source', data: 'Date',
@@ -86,7 +86,55 @@ function tr(chave) {
 /* Dicionário de frases em português → inglês, aplicado ao texto já desenhado.
    Frases mais longas primeiro, para não partir expressões compostas. */
 const PT_EN = {
-  'Carteira v1.3 —': 'Wallet v1.3 —',
+  'Carteira v1.4 —': 'Wallet v1.4 —',
+  'Orçamentos mensais': 'Monthly budgets',
+  'Resumo': 'Summary',
+  'Orçamentos do mês': 'Monthly budgets',
+  'Saldo do mês (ganhos − gastos)': 'Month balance (income − expenses)',
+  'Saldo de cada mês (ganhos − gastos). Verde = positivo, vermelho = negativo.':
+    'Balance of each month (income − expenses). Green = positive, red = negative.',
+  'Próximos recorrentes': 'Upcoming recurring',
+  'Top categorias do mês': 'Top categories this month',
+  'Tendência · 12 meses': 'Trend · 12 months',
+  'Ainda não há dados suficientes.': 'Not enough data yet.',
+  'Ações rápidas': 'Quick actions',
+  'Hoje · gastos': 'Today · expenses', 'Hoje · ganhos': 'Today · income',
+  'Este mês ·': 'This month ·',
+  'disponível': 'available', 'acima do limite': 'over the limit', 'usado': 'used',
+  'excedido(s)': 'over budget',
+  'Orçamento guardado ✓': 'Budget saved ✓', 'Orçamento removido ✓': 'Budget removed ✓',
+  'Escreve um limite em € para cada categoria de gastos (vazio = sem limite).':
+    'Type a € limit for each expense category (empty = no limit).',
+  'O progresso aparece na aba Gastos e no Resumo.':
+    'Progress appears in the Expenses tab and in Summary.',
+  'Duplicar': 'Duplicate',
+  'Repetir último': 'Repeat last',
+  'A editar uma cópia — confirma a data e guarda.': 'Editing a copy — confirm the date and save.',
+  'A copiar — confirma a data e guarda.': 'Copying — confirm the date and save.',
+  'Ainda não há movimentos para repetir.': 'No movements to repeat yet.',
+  'Preenchido com o último movimento — confirma e guarda.':
+    'Filled with the last movement — confirm and save.',
+  'Anular': 'Undo',
+  'movimento(s) restaurado(s) ✓': 'movement(s) restored ✓',
+  'Não foi possível restaurar.': 'Could not restore.',
+  'Restaurado ✓': 'Restored ✓',
+  'Frequência': 'Frequency', 'Mensal': 'Monthly', 'Semanal': 'Weekly', 'Anual': 'Yearly',
+  'pausado': 'paused', 'próximo': 'next',
+  'Recorrente atualizado ✓': 'Recurring rule updated ✓',
+  'Recorrente pausado ✓': 'Recurring rule paused ✓',
+  'Recorrente retomado ✓': 'Recurring rule resumed ✓',
+  'Guardar alterações': 'Save changes',
+  'Apagar este recorrente? Os movimentos já criados mantêm-se.':
+    'Delete this recurring rule? Movements already created are kept.',
+  'Cria sozinho um movimento fixo (mensal, semanal ou anual) e, sempre que abres a app,':
+    'Creates a fixed movement automatically (monthly, weekly or yearly) and, whenever you open the app,',
+  'completa o que faltar. Nos meses mais curtos usa o último dia.':
+    'fills in what is missing. In shorter months it uses the last day.',
+  'Pesquisar': 'Search', 'Explicação ou categoria': 'Note or category',
+  'Relatório (PDF)': 'Report (PDF)',
+  '＋ Gasto': '＋ Expense', '＋ Ganho': '＋ Income',
+  '🖨 Relatório (PDF)': '🖨 Report (PDF)',
+  'Pausar': 'Pause', 'Retomar': 'Resume',
   'O JSON substitui tudo (restauro completo). O CSV acrescenta movimentos aos que já tens. No iPhone, os ficheiros ficam em "Ficheiros → Descarregamentos".':
     'JSON replaces everything (full restore). CSV adds movements to the ones you already have. On iPhone, files are saved in "Files → Downloads".',
   'Apaga apenas os movimentos do período escolhido. Para apagar um movimento em particular, abre-o no Histórico (ou numa lista) e usa "Apagar".':
@@ -309,6 +357,11 @@ function esc(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* Normaliza texto para pesquisa (minúsculas, sem acentos) */
+function normalizar(s) {
+  return String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 /* Converte "12,50" / "1.234,56" / "12.5" em número */
 function parseValor(txt) {
   let s = String(txt ?? '').replace(/[^\d.,-]/g, '');
@@ -344,12 +397,22 @@ function cssVar(nome) {
 }
 
 let avisoTimer = null;
-function aviso(msg) {
+let avisoAcao = null;
+function aviso(msg, acao) {
   const el = $('#aviso');
-  el.textContent = traduzirTexto(msg);
+  avisoAcao = acao ? acao.fn : null;
+  el.innerHTML = `<span>${esc(traduzirTexto(msg))}</span>` +
+    (acao ? ` <button type="button" class="aviso-btn">${esc(traduzirTexto(acao.texto))}</button>` : '');
   el.hidden = false;
   clearTimeout(avisoTimer);
-  avisoTimer = setTimeout(() => { el.hidden = true; }, 2800);
+  avisoTimer = setTimeout(() => { el.hidden = true; avisoAcao = null; }, acao ? 7000 : 2800);
+}
+
+function avisoFechar() {
+  clearTimeout(avisoTimer);
+  avisoAcao = null;
+  const el = $('#aviso');
+  if (el) el.hidden = true;
 }
 
 /* As caixas do sistema (confirmar/pedir texto) seguem o idioma escolhido */
@@ -361,7 +424,7 @@ window.prompt = (m, d) => promptOriginal(traduzirTexto(m), d);
 /* ---------- 2. Base de dados local (IndexedDB) ---------- */
 
 const NOME_BD = 'carteira';
-const V_BD = 2;
+const V_BD = 3;
 let bd = null;
 
 function abrirBD() {
@@ -377,6 +440,10 @@ function abrirBD() {
       }
       if (!db.objectStoreNames.contains('recorrentes')) {
         db.createObjectStore('recorrentes', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('orcamentos')) {
+        /* um orçamento por categoria; "chave" = tipo|categoria */
+        db.createObjectStore('orcamentos', { keyPath: 'chave' });
       }
     };
     req.onsuccess = () => { bd = req.result; res(bd); };
@@ -433,23 +500,31 @@ function idbLote(store, itens) {
   });
 }
 
-/* Substitui tudo (usado no restauro de JSON) */
-function idbSubstituir(movs, cats, recs) {
+/* Volta a gravar registos existentes (usado pelo "Anular") */
+function idbPutLote(store, itens) {
   return new Promise((res, rej) => {
-    const lojas = ['movimentos', 'categorias'];
-    if (recs) lojas.push('recorrentes');
-    const t = bd.transaction(lojas, 'readwrite');
+    const t = bd.transaction(store, 'readwrite');
+    const s = t.objectStore(store);
+    itens.forEach((i) => s.put(i));
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  });
+}
+
+/* Substitui tudo (usado no restauro de JSON) */
+function idbSubstituir(movs, cats, recs, orcs) {
+  return new Promise((res, rej) => {
+    const t = bd.transaction(['movimentos', 'categorias', 'recorrentes', 'orcamentos'], 'readwrite');
     const sm = t.objectStore('movimentos');
     const sc = t.objectStore('categorias');
-    sm.clear();
-    sc.clear();
+    const sr = t.objectStore('recorrentes');
+    const so = t.objectStore('orcamentos');
+    sm.clear(); sc.clear(); sr.clear(); so.clear();
     movs.forEach((m) => sm.put(m)); // se não têm id, o próprio IndexedDB cria
     cats.forEach((c) => sc.put(c));
-    if (recs) {
-      const sr = t.objectStore('recorrentes');
-      sr.clear();
-      recs.forEach((r) => sr.put(r));
-    }
+    (recs || []).forEach((r) => sr.put(r));
+    (orcs || []).forEach((o) => so.put(o));
     t.oncomplete = () => res();
     t.onerror = () => rej(t.error);
     t.onabort = () => rej(t.error);
@@ -457,7 +532,7 @@ function idbSubstituir(movs, cats, recs) {
 }
 
 function idbApagarTudo() {
-  return idbSubstituir([], [], []);
+  return idbSubstituir([], [], [], []);
 }
 
 /* ---------- 3. Estado da app ---------- */
@@ -466,14 +541,16 @@ const estado = {
   movs: [],
   cats: [],
   recs: [],
-  aba: 'gastos',
+  orcs: [],
+  aba: 'resumo',
   periodo: { gastos: 'mes', ganhos: 'mes', balanco: 'mes' },
   custom: { gastos: null, ganhos: null, balanco: null },
   /* Dia escolhido no filtro "Dia" de cada aba */
   dia: { gastos: hojeISO(), ganhos: hojeISO(), balanco: hojeISO() },
   hist: 'tudo',
-  /* Filtros do Histórico: categorias (multi) e tempo */
+  /* Filtros do Histórico: categorias (multi), pesquisa e tempo */
   histCats: [],
+  histQ: '',
   histTempo: { tipo: 'tudo', data: hojeISO(), ini: '', fim: '' }
 };
 
@@ -494,6 +571,7 @@ async function carregarDados() {
   estado.movs = await idbTodos('movimentos');
   estado.cats = await idbTodos('categorias');
   estado.recs = (await idbTodos('recorrentes')) || [];
+  estado.orcs = (await idbTodos('orcamentos')) || [];
 
   if (!estado.cats.length) {
     await idbLote('categorias', padraoCats());
@@ -823,13 +901,14 @@ function mostrarAba(nome) {
   estado.aba = nome;
   $$('.aba').forEach((s) => s.classList.toggle('ativa', s.id === 'aba-' + nome));
   $$('.tab-btn').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === nome));
-  $('#titulo-aba').textContent = tr({ gastos: 'gastos', ganhos: 'ganhos', balanco: 'balanco', historico: 'historico' }[nome]);
+  $('#titulo-aba').textContent = tr({ resumo: 'resumo', gastos: 'gastos', ganhos: 'ganhos', balanco: 'balanco', historico: 'historico' }[nome]);
   renderAba(nome);
   window.scrollTo(0, 0);
 }
 
 function renderAba(nome) {
-  if (nome === 'gastos') renderStats('gasto');
+  if (nome === 'resumo') renderResumo();
+  else if (nome === 'gastos') renderStats('gasto');
   else if (nome === 'ganhos') renderStats('ganho');
   else if (nome === 'balanco') renderBalanco();
   else renderHistorico();
@@ -890,11 +969,13 @@ function linhaMov(m, mostrarData) {
   } else {
     sub = esc(m.nota || '');
   }
-  return `<button type="button" class="mov" data-id="${m.id}">
+  return `<div class="mov" data-id="${m.id}" role="button" tabindex="0">
     <span class="cor" style="background:${corDe(m.categoria)}"></span>
     <span class="meio"><span class="t">${m.recorrenteId ? '<span class="marca-rec" aria-label="Recorrente">↻</span> ' : ''}${esc(m.categoria)}</span><span class="n">${sub}</span></span>
     <span class="val ${pos ? 'pos' : 'neg'}">${pos ? '+' : '−'}${fmt(m.valor)}</span>
-  </button>`;
+    <button type="button" class="mov-dup" data-dup="${m.id}" title="Duplicar"
+            aria-label="Duplicar ${esc(m.categoria)}">⧉</button>
+  </div>`;
 }
 
 /* Soma gastos/ganhos agrupados por dia, do mais recente para o mais antigo */
@@ -970,6 +1051,268 @@ function cartaoPorDia(aba, p, modo) {
   </div>`;
 }
 
+/* ---------- 5b. Orçamentos por categoria (limite mensal) ---------- */
+
+function orcDe(tipo, categoria) {
+  return estado.orcs.find((o) => o.chave === tipo + '|' + categoria) || null;
+}
+
+function mesAtualIntervalo() {
+  const d = new Date();
+  return {
+    inicio: iso(new Date(d.getFullYear(), d.getMonth(), 1)),
+    fim: iso(new Date(d.getFullYear(), d.getMonth() + 1, 0))
+  };
+}
+
+/* Total de uma categoria no mês atual (o orçamento é sempre mensal) */
+function totalMesCategoria(tipo, categoria) {
+  const m = mesAtualIntervalo();
+  return round2(estado.movs
+    .filter((x) => x.tipo === tipo && x.categoria === categoria && x.data >= m.inicio && x.data <= m.fim)
+    .reduce((s, x) => s + x.valor, 0));
+}
+
+/* Orçamentos com o gasto do mês já calculado, do mais apertado ao mais folgado */
+function orcamentosDoMes() {
+  return estado.orcs
+    .filter((o) => o.limite > 0)
+    .map((o) => {
+      const gasto = totalMesCategoria(o.tipo || 'gasto', o.categoria);
+      return {
+        ...o, gasto,
+        pct: o.limite > 0 ? (gasto / o.limite) * 100 : 0,
+        resta: round2(o.limite - gasto)
+      };
+    })
+    .sort((a, b) => b.pct - a.pct);
+}
+
+/* Cartão com barras de progresso de cada orçamento (mês atual) */
+function cartaoOrcamentos() {
+  const lista = orcamentosDoMes();
+  if (!lista.length) return '';
+  const excedidos = lista.filter((o) => o.gasto > o.limite).length;
+  return `<div class="cartao">
+    <h3>Orçamentos do mês${excedidos ? ` · ${excedidos} excedido(s)` : ''}</h3>
+    ${lista.map((o) => {
+      const cor = o.gasto > o.limite ? cssVar('--gasto') : corDe(o.categoria);
+      const resto = o.resta >= 0 ? `${fmt(o.resta)} disponível` : `${fmt(Math.abs(o.resta))} acima do limite`;
+      return `<div class="orc-item${o.gasto > o.limite ? ' excedido' : ''}">
+        <div class="orc-topo">
+          <span><span class="ponto" style="background:${cor};display:inline-block;vertical-align:middle;margin-right:6px"></span>${esc(o.categoria)}</span>
+          <b>${fmt(o.gasto)} / ${fmt(o.limite)}</b>
+        </div>
+        <div class="barra-fundo"><div class="barra-fill" style="width:${Math.min(100, o.pct).toFixed(1)}%;background:${cor}"></div></div>
+        <div class="orc-topo"><span class="resto">${fmtPct(o.pct)} usado</span><span class="resto">${resto}</span></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+async function guardarOrcamento(chave, valorTxt) {
+  const i = chave.indexOf('|');
+  const tipo = chave.slice(0, i);
+  const categoria = chave.slice(i + 1);
+  const v = parseValor(valorTxt);
+  if (v > 0) await idbPut('orcamentos', { chave, tipo, categoria, limite: round2(v) });
+  else await idbDel('orcamentos', chave);
+  await carregarDados();
+  renderAba(estado.aba);
+  aviso(v > 0 ? 'Orçamento guardado ✓' : 'Orçamento removido ✓');
+}
+
+/* ---------- 5c. Tendência dos últimos meses ---------- */
+
+/* n meses até ao atual, com ganhos, gastos e saldo de cada um */
+function tendenciaMeses(n = 12) {
+  const hoje = new Date();
+  const meses = [];
+  for (let k = n - 1; k >= 0; k--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1);
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    meses.push({ chave, rotulo: dtMes.format(d).replace('.', ''), gastos: 0, ganhos: 0 });
+  }
+  const mapa = new Map(meses.map((m) => [m.chave, m]));
+  estado.movs.forEach((m) => {
+    const b = mapa.get(m.data.slice(0, 7));
+    if (!b) return;
+    if (m.tipo === 'gasto') b.gastos += m.valor; else b.ganhos += m.valor;
+  });
+  return meses.map((m) => ({
+    ...m, gastos: round2(m.gastos), ganhos: round2(m.ganhos), saldo: round2(m.ganhos - m.gastos)
+  }));
+}
+
+/* Barras divergentes do saldo mensal (verde p/ cima, vermelho p/ baixo) */
+function saldoBarrasSVG(meses) {
+  if (!meses.length) return '<p class="vazio">Sem dados.</p>';
+  const W = 320, H = 150, pt = 16, pb = 22, pe = 6;
+  const alt = H - pt - pb;
+  const maxAbs = Math.max(1, ...meses.map((m) => Math.abs(m.saldo)));
+  const n = meses.length;
+  const slot = (W - pe * 2) / n;
+  const bw = Math.max(4, slot * 0.6);
+  const zero = pt + alt / 2;
+  const corG = cssVar('--ganho'), corR = cssVar('--gasto');
+  const linha = cssVar('--linha');
+  const passo = Math.max(1, Math.ceil(n / 8));
+  let barras = '', rotulos = '';
+  meses.forEach((m, i) => {
+    const x = pe + i * slot + (slot - bw) / 2;
+    const h = Math.max(1.5, (Math.abs(m.saldo) / maxAbs) * (alt / 2));
+    const y = m.saldo >= 0 ? zero - h : zero;
+    barras += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${m.saldo >= 0 ? corG : corR}"><title>${esc(m.rotulo)}: ${fmt(m.saldo)}</title></rect>`;
+    if (i % passo === 0) {
+      rotulos += `<text x="${(pe + i * slot + slot / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" class="svg-rotulo">${esc(m.rotulo)}</text>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="grafico" role="img" aria-label="Saldo dos últimos meses">
+    <line x1="${pe}" y1="${zero.toFixed(1)}" x2="${W - pe}" y2="${zero.toFixed(1)}" stroke="${linha}" stroke-width="1"/>
+    ${barras}${rotulos}
+  </svg>`;
+}
+
+/* ---------- 5d. Resumo / Início ---------- */
+
+function renderResumo() {
+  exportadores = {};
+  const m = mesAtualIntervalo();
+  const doMes = estado.movs.filter((x) => x.data >= m.inicio && x.data <= m.fim);
+  const ganhosMes = round2(doMes.filter((x) => x.tipo === 'ganho').reduce((s, x) => s + x.valor, 0));
+  const gastosMes = round2(doMes.filter((x) => x.tipo === 'gasto').reduce((s, x) => s + x.valor, 0));
+  const saldoMes = round2(ganhosMes - gastosMes);
+
+  const hoje = hojeISO();
+  const hojeMovs = estado.movs.filter((x) => x.data === hoje);
+  const gastoHoje = round2(hojeMovs.filter((x) => x.tipo === 'gasto').reduce((s, x) => s + x.valor, 0));
+  const ganhoHoje = round2(hojeMovs.filter((x) => x.tipo === 'ganho').reduce((s, x) => s + x.valor, 0));
+
+  const gruposMes = agrupar(doMes.filter((x) => x.tipo === 'gasto'));
+  const prox = proximosRecorrentes(5);
+  const meses = tendenciaMeses(12);
+  const temMes = meses.some((x) => x.ganhos || x.gastos);
+
+  registarExportador('resumo-mes', 'resumo-mes', ['indicador', 'valor'],
+    [['Ganhos', ganhosMes], ['Gastos', gastosMes], ['Saldo', saldoMes]]);
+  registarExportador('resumo-tendencia', 'resumo-tendencia-12m', ['mes', 'ganhos', 'gastos', 'saldo'],
+    meses.map((x) => [x.chave, x.ganhos, x.gastos, x.saldo]));
+
+  const cartoes = [
+    `<div class="cartao">
+      <h3>Este mês · ${periodoTexto({ tipo: 'mes', ...m })}</h3>
+      <div class="total-grande ${saldoMes >= 0 ? 'pos' : 'neg'}">${saldoMes >= 0 ? '+' : '−'}${fmt(Math.abs(saldoMes))}</div>
+      <div class="sub">Saldo do mês (ganhos − gastos)</div>
+      <div class="grelha-2" style="margin-top:12px">
+        <div class="mini"><span class="v pos">${fmt(ganhosMes)}</span><span class="r">Ganhos</span></div>
+        <div class="mini"><span class="v neg">${fmt(gastosMes)}</span><span class="r">Gastos</span></div>
+      </div>
+      <div class="linha-est"><span>Hoje · gastos</span><b class="neg">${fmt(gastoHoje)}</b></div>
+      <div class="linha-est"><span>Hoje · ganhos</span><b class="pos">${fmt(ganhoHoje)}</b></div>
+      ${barraExportar('resumo-mes')}
+    </div>`,
+
+    cartaoOrcamentos(),
+
+    prox.length ? `<div class="cartao">
+      <h3>Próximos recorrentes</h3>
+      ${prox.map((p) => `<div class="linha-est">
+        <span>${dtCurto.format(dataDe(p.data))} · ${esc(p.regra.categoria)}</span>
+        <b class="${p.regra.tipo === 'ganho' ? 'pos' : 'neg'}">${p.regra.tipo === 'ganho' ? '+' : '−'}${fmt(p.regra.valor)}</b>
+      </div>`).join('')}
+    </div>` : '',
+
+    gruposMes.length ? `<div class="cartao">
+      <h3>Top categorias do mês</h3>
+      ${gruposMes.slice(0, 5).map((g) => {
+        const pct = gastosMes ? (g.total / gastosMes) * 100 : 0;
+        return `<div class="orc-item">
+          <div class="orc-topo"><span>${esc(g.nome)}</span><b>${fmt(g.total)}</b></div>
+          <div class="barra-fundo"><div class="barra-fill" style="width:${pct.toFixed(1)}%;background:${g.cor}"></div></div>
+          <div class="orc-topo"><span class="resto">${fmtPct(pct)}</span><span class="resto">${g.n}×</span></div>
+        </div>`;
+      }).join('')}
+    </div>` : '',
+
+    temMes ? `<div class="cartao">
+      <h3>Tendência · 12 meses</h3>
+      ${barraExportar('resumo-tendencia')}
+      ${saldoBarrasSVG(meses)}
+      <p class="def-nota">Saldo de cada mês (ganhos − gastos). Verde = positivo, vermelho = negativo.</p>
+    </div>` : `<div class="cartao"><h3>Tendência · 12 meses</h3><p class="vazio">Ainda não há dados suficientes.</p></div>`,
+
+    `<div class="cartao">
+      <h3>Ações rápidas</h3>
+      <div class="acoes-folha">
+        <button type="button" class="btn-mini azul" data-acao-rapida="gasto">＋ Gasto</button>
+        <button type="button" class="btn-mini azul" data-acao-rapida="ganho">＋ Ganho</button>
+        <button type="button" class="btn-mini" id="btn-imprimir">🖨 Relatório (PDF)</button>
+      </div>
+    </div>`
+  ];
+  $('#stats-resumo').innerHTML = cartoes.filter(Boolean).join('');
+}
+
+/* ---------- 5e. Relatório para imprimir / PDF ---------- */
+
+function imprimirRelatorio() {
+  const m = mesAtualIntervalo();
+  const doMes = ordenarDesc(estado.movs.filter((x) => x.data >= m.inicio && x.data <= m.fim));
+  const gastos = doMes.filter((x) => x.tipo === 'gasto');
+  const ganhos = doMes.filter((x) => x.tipo === 'ganho');
+  const totGas = round2(gastos.reduce((s, x) => s + x.valor, 0));
+  const totGan = round2(ganhos.reduce((s, x) => s + x.valor, 0));
+  const saldo = round2(totGan - totGas);
+
+  const grupos = agrupar(gastos);
+  const dias = new Map();
+  doMes.forEach((x) => {
+    const d = dias.get(x.data) || { gastos: 0, ganhos: 0 };
+    if (x.tipo === 'gasto') d.gastos += x.valor; else d.ganhos += x.valor;
+    dias.set(x.data, d);
+  });
+
+  $('#impressao').innerHTML = `
+    <h1>Carteira — Relatório</h1>
+    <div>${periodoTexto({ tipo: 'mes', ...m })}</div>
+    <div class="rel-totais">
+      <span>Ganhos: <b class="rel-pos">${fmt(totGan)}</b></span>
+      <span>Gastos: <b class="rel-neg">${fmt(totGas)}</b></span>
+      <span>Saldo: <b class="${saldo >= 0 ? 'rel-pos' : 'rel-neg'}">${saldo >= 0 ? '+' : '−'}${fmt(Math.abs(saldo))}</b></span>
+    </div>
+    <h2>Gastos por categoria</h2>
+    <table><thead><tr><th>Categoria</th><th>Total</th><th>Registos</th></tr></thead>
+      <tbody>${grupos.map((g) => `<tr><td>${esc(g.nome)}</td><td>${fmt(g.total)}</td><td>${g.n}</td></tr>`).join('') || '<tr><td colspan="3">Sem gastos</td></tr>'}</tbody></table>
+    <h2>Por dia</h2>
+    <table><thead><tr><th>Dia</th><th>Ganhos</th><th>Gastos</th><th>Saldo</th></tr></thead>
+      <tbody>${[...dias.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([data, d]) => {
+        const net = round2(d.ganhos - d.gastos);
+        return `<tr><td>${dtCurto.format(dataDe(data))}</td><td>${d.ganhos ? fmt(d.ganhos) : '—'}</td><td>${d.gastos ? fmt(d.gastos) : '—'}</td><td class="${net >= 0 ? 'rel-pos' : 'rel-neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</td></tr>`;
+      }).join('') || '<tr><td colspan="4">Sem movimentos</td></tr>'}</tbody></table>
+    <h2>Movimentos (${doMes.length})</h2>
+    <table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Nota</th><th>Valor</th></tr></thead>
+      <tbody>${doMes.map((x) => `<tr><td>${x.data}</td><td>${x.tipo === 'gasto' ? 'Gasto' : 'Ganho'}</td><td>${esc(x.categoria)}</td><td>${esc(x.nota || '')}</td><td class="${x.tipo === 'gasto' ? 'rel-neg' : 'rel-pos'}">${x.tipo === 'gasto' ? '−' : '+'}${fmt(x.valor)}</td></tr>`).join('')}</tbody></table>
+    <p style="margin-top:16px;font-size:11px;color:#666">Gerado em ${dtLongo.format(new Date())} · Carteira v1.4</p>`;
+
+  traduzirDOM($('#impressao'));
+  try { window.print(); } catch (err) { console.warn(err); }
+}
+
+/* ---------- 5f. Restaurar (usado pelo "Anular") ---------- */
+
+async function restaurarMovimentos(movs) {
+  try {
+    await idbPutLote('movimentos', movs);
+    await carregarDados();
+    if (!$('#def-fundo').hidden) renderDefinicoes();
+    renderAba(estado.aba);
+    aviso(`${movs.length} movimento(s) restaurado(s) ✓`);
+  } catch (err) {
+    console.error(err);
+    aviso('Não foi possível restaurar.');
+  }
+}
+
 /* ----- Estatísticas de Gastos e de Ganhos (mesma estrutura) ----- */
 function renderStats(tipo) {
   const aba = tipo === 'gasto' ? 'gastos' : 'ganhos';
@@ -1012,6 +1355,9 @@ function renderStats(tipo) {
 
     /* Tabela dia a dia (gastos ou ganhos) */
     cartaoPorDia(aba, p, tipo),
+
+    /* Orçamentos mensais (só nos gastos) */
+    tipo === 'gasto' ? cartaoOrcamentos() : '',
 
     /* Total por categoria/origem (donut + percentagens) */
     n
@@ -1245,6 +1591,8 @@ function histBase() {
     const escolhidas = new Set(estado.histCats);
     movs = movs.filter((m) => escolhidas.has(m.tipo + '|' + m.categoria));
   }
+  const q = normalizar(estado.histQ).trim();
+  if (q) movs = movs.filter((m) => normalizar((m.nota || '') + ' ' + m.categoria).includes(q));
   const iv = histIntervalo();
   if (iv) movs = movs.filter((m) => m.data >= iv.inicio && m.data <= iv.fim);
   return movs;
@@ -1260,7 +1608,7 @@ function renderHistorico() {
     .join('');
 
   /* Contador no botão "Filtros" */
-  const nFiltros = estado.histCats.length + (estado.histTempo.tipo !== 'tudo' ? 1 : 0);
+  const nFiltros = estado.histCats.length + (estado.histTempo.tipo !== 'tudo' ? 1 : 0) + (estado.histQ ? 1 : 0);
   const badge = $('#badge-filtros');
   if (badge) { badge.textContent = nFiltros ? String(nFiltros) : ''; badge.hidden = !nFiltros; }
 
@@ -1273,7 +1621,7 @@ function renderHistorico() {
     const semPeriodo = estado.histTempo.tipo === 'intervalo' && !iv;
     const texto = semPeriodo
       ? 'Escolhe o intervalo de tempo.'
-      : (estado.histTempo.tipo !== 'tudo' || estado.histCats.length || estado.hist !== 'tudo'
+      : (estado.histTempo.tipo !== 'tudo' || estado.histCats.length || estado.histQ || estado.hist !== 'tudo'
           ? 'Nada corresponde a esses filtros.'
           : 'Ainda não há movimentos para mostrar.');
     $('#lista-historico').innerHTML = `<p class="vazio">${texto}</p>`;
@@ -1297,13 +1645,14 @@ function renderHistorico() {
   const rotulo = estado.histTempo.tipo === 'tudo' ? '' :
     (iv ? periodoTexto({ tipo: 'intervalo', ...iv }) : '');
   const nomesCats = estado.histCats.map((k) => k.split('|')[1]).join(', ');
+  const resumoFiltros = [nomesCats, estado.histQ ? `“${estado.histQ}”` : ''].filter(Boolean).join(' · ');
 
   $('#lista-historico').innerHTML = `<div class="cartao">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px">
       <h3 style="margin:0">Histórico (${movs.length})${rotulo ? ` · ${rotulo}` : ''}</h3>
       ${barraExportar('historico-lista')}
     </div>
-    ${nomesCats ? `<div class="filtros-resumo">${esc(nomesCats)}</div>` : ''}
+    ${resumoFiltros ? `<div class="filtros-resumo">${esc(resumoFiltros)}</div>` : ''}
     ${grupos.map((g) => {
       const net = round2(g.ganhos - g.gastos);
       return `<div class="lista-dia">
@@ -1337,7 +1686,8 @@ function podarHistCats() {
 function abrirFiltros() {
   rascunhoFiltros = {
     histCats: [...estado.histCats],
-    histTempo: { ...estado.histTempo }
+    histTempo: { ...estado.histTempo },
+    histQ: estado.histQ
   };
   renderFiltrosHist();
   $('#filtros-fundo').hidden = false;
@@ -1354,6 +1704,7 @@ function aplicarFiltrosHist() {
   if (rascunhoFiltros) {
     estado.histCats = rascunhoFiltros.histCats;
     estado.histTempo = rascunhoFiltros.histTempo;
+    estado.histQ = (rascunhoFiltros.histQ || '').trim();
   }
   fecharFiltros();
   renderHistorico();
@@ -1374,6 +1725,11 @@ function renderFiltrosHist() {
     </div>`).join('');
 
   $('#filtros-conteudo').innerHTML = `
+    <div class="def-sec">
+      <h3>Pesquisar</h3>
+      <input type="text" class="controlo" id="hf-q" autocomplete="off"
+             placeholder="Explicação ou categoria" value="${esc(rascunhoFiltros.histQ || '')}">
+    </div>
     <div class="def-sec">
       <h3>Categorias</h3>
       ${secoes}
@@ -1421,7 +1777,8 @@ function onFiltrosClick(ev) {
   if (ev.target.closest('#btn-limpar-filtros')) {
     rascunhoFiltros = {
       histCats: [],
-      histTempo: { tipo: 'tudo', data: hojeISO(), ini: '', fim: '' }
+      histTempo: { tipo: 'tudo', data: hojeISO(), ini: '', fim: '' },
+      histQ: ''
     };
     renderFiltrosHist();
     return;
@@ -1431,6 +1788,7 @@ function onFiltrosClick(ev) {
 
 function onFiltrosChange(ev) {
   if (!rascunhoFiltros) return;
+  if (ev.target.id === 'hf-q') { rascunhoFiltros.histQ = ev.target.value; return; }
   const t = rascunhoFiltros.histTempo;
   if (ev.target.id === 'hf-dia') t.data = ev.target.value || hojeISO();
   else if (ev.target.id === 'hf-ini') t.ini = ev.target.value;
@@ -1481,22 +1839,93 @@ function fecharDetalhe() {
   libertarScroll();
 }
 
-/* ---------- 6c. Movimentos recorrentes (valor fixo, todos os meses) ---------- */
+/* ---------- 6c. Movimentos recorrentes (mensal / semanal / anual) ---------- */
 
 /* Datas devidas de uma regra desde a última gerada até hoje */
 function ocorrenciasDevidas(regra, hoje) {
-  const datas = [];
   const inicio = regra.inicio || hoje;
-  const fim = dataDe(hoje);
+  if (inicio > hoje) return [];
+  const freq = regra.frequencia || 'mensal';
+  const datas = [];
+
+  if (freq === 'semanal') {
+    let d = inicio;
+    let guarda = 0;
+    while (d <= hoje && guarda++ < 2000) {
+      if (!regra.ultimo || d > regra.ultimo) datas.push(d);
+      d = addDias(d, 7);
+    }
+    return datas;
+  }
+
+  if (freq === 'anual') {
+    const mes = dataDe(inicio).getMonth();
+    const dia = Math.min(31, Math.max(1, parseInt(regra.dia, 10) || dataDe(inicio).getDate()));
+    const fy = dataDe(hoje).getFullYear();
+    for (let ano = dataDe(inicio).getFullYear(); ano <= fy; ano++) {
+      const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+      const d = iso(new Date(ano, mes, Math.min(dia, ultimoDia)));
+      if (d >= inicio && d <= hoje && (!regra.ultimo || d > regra.ultimo)) datas.push(d);
+    }
+    return datas;
+  }
+
+  /* mensal (por omissão) */
+  const dia = Math.min(31, Math.max(1, parseInt(regra.dia, 10) || 1));
   let ano = dataDe(inicio).getFullYear();
   let mes = dataDe(inicio).getMonth(); // 0-11
+  const fim = dataDe(hoje);
   while (ano < fim.getFullYear() || (ano === fim.getFullYear() && mes <= fim.getMonth())) {
     const ultimoDia = new Date(ano, mes + 1, 0).getDate();
-    const d = iso(new Date(ano, mes, Math.min(regra.dia, ultimoDia)));
+    const d = iso(new Date(ano, mes, Math.min(dia, ultimoDia)));
     if (d >= inicio && d <= hoje && (!regra.ultimo || d > regra.ultimo)) datas.push(d);
     mes++; if (mes > 11) { mes = 0; ano++; }
   }
   return datas;
+}
+
+/* Próxima data da regra depois de hoje */
+function proximaOcorrencia(regra, hoje) {
+  const inicio = regra.inicio || hoje;
+  if (inicio > hoje) return inicio;
+  const freq = regra.frequencia || 'mensal';
+
+  if (freq === 'semanal') {
+    const semanas = Math.floor(diffDias(inicio, hoje) / 7) + 1;
+    return addDias(inicio, semanas * 7);
+  }
+  if (freq === 'anual') {
+    const mes = dataDe(inicio).getMonth();
+    const dia = Math.min(31, Math.max(1, parseInt(regra.dia, 10) || dataDe(inicio).getDate()));
+    let ano = dataDe(hoje).getFullYear();
+    let d = iso(new Date(ano, mes, Math.min(dia, new Date(ano, mes + 1, 0).getDate())));
+    if (d <= hoje) {
+      ano++;
+      d = iso(new Date(ano, mes, Math.min(dia, new Date(ano, mes + 1, 0).getDate())));
+    }
+    return d;
+  }
+  const dia = Math.min(31, Math.max(1, parseInt(regra.dia, 10) || 1));
+  let ano = dataDe(hoje).getFullYear();
+  let mes = dataDe(hoje).getMonth();
+  let d = iso(new Date(ano, mes, Math.min(dia, new Date(ano, mes + 1, 0).getDate())));
+  if (d <= hoje) {
+    mes++; if (mes > 11) { mes = 0; ano++; }
+    d = iso(new Date(ano, mes, Math.min(dia, new Date(ano, mes + 1, 0).getDate())));
+  }
+  return d;
+}
+
+/* Próximas ocorrências de todas as regras ativas */
+function proximosRecorrentes(n = 5) {
+  const hoje = hojeISO();
+  const out = [];
+  (estado.recs || []).forEach((r) => {
+    if (r.ativo === false) return;
+    const d = proximaOcorrencia(r, hoje);
+    if (d) out.push({ data: d, regra: r });
+  });
+  return out.sort((a, b) => a.data.localeCompare(b.data)).slice(0, n);
 }
 
 /* Cria os movimentos em falta de todas as regras e devolve quantos criou */
@@ -1520,25 +1949,87 @@ async function gerarRecorrentes() {
   return total;
 }
 
-async function adicionarRecorrente() {
-  const tipo = $('#rec-tipo').value;
-  const valor = parseValor($('#rec-valor').value);
-  if (!(valor > 0)) { aviso('Escreve um valor maior que zero.'); return; }
+/* Regra que está a ser editada no formulário (null = a adicionar) */
+let recEditando = null;
 
-  const dia = Math.min(31, Math.max(1, parseInt($('#rec-dia').value, 10) || 1));
+function lerFormRecorrente() {
+  const tipo = $('#rec-tipo').value;
   const sel = $('#rec-cat');
-  const categoria = (sel && sel.value) || catsDe(tipo)[0];
-  if (!categoria) { aviso('Escolhe uma categoria.'); return; }
+  return {
+    tipo,
+    valor: parseValor($('#rec-valor').value),
+    frequencia: ($('#rec-freq') && $('#rec-freq').value) || 'mensal',
+    categoria: (sel && sel.value) || catsDe(tipo)[0],
+    nota: $('#rec-nota').value.trim(),
+    dia: Math.min(31, Math.max(1, parseInt($('#rec-dia').value, 10) || 1))
+  };
+}
+
+async function adicionarRecorrente() {
+  const f = lerFormRecorrente();
+  if (!(f.valor > 0)) { aviso('Escreve um valor maior que zero.'); return; }
+  if (!f.categoria) { aviso('Escolhe uma categoria.'); return; }
+
+  if (recEditando) {
+    const r = estado.recs.find((x) => x.id === recEditando);
+    recEditando = null;
+    if (!r) { renderDefinicoes(); return; }
+    /* ultimo = hoje evita gerar outra vez uma ocorrência do período atual */
+    await idbPut('recorrentes', {
+      ...r, tipo: f.tipo, valor: round2(f.valor), frequencia: f.frequencia,
+      categoria: f.categoria, dia: f.dia, nota: f.nota, ultimo: hojeISO()
+    });
+    await carregarDados();
+    renderDefinicoes();
+    renderAba(estado.aba);
+    aviso('Recorrente atualizado ✓');
+    return;
+  }
 
   await idbAdd('recorrentes', {
-    tipo, valor: round2(valor), categoria, dia,
-    nota: $('#rec-nota').value.trim(), inicio: hojeISO(), ultimo: null, ativo: true
+    tipo: f.tipo, valor: round2(f.valor), frequencia: f.frequencia, categoria: f.categoria,
+    dia: f.dia, nota: f.nota, inicio: hojeISO(), ultimo: null, ativo: true
   });
   const n = await gerarRecorrentes();
   await carregarDados();
   renderDefinicoes();
   renderAba(estado.aba);
   aviso(n ? `Recorrente criado · ${n} movimento(s) adicionado(s) ✓` : 'Recorrente criado ✓');
+}
+
+function ajustarCampoDiaRec() {
+  const freq = ($('#rec-freq') && $('#rec-freq').value) || 'mensal';
+  const campo = $('#rec-dia') && $('#rec-dia').closest('label');
+  if (campo) campo.hidden = freq === 'semanal';
+}
+
+function editarRecorrente(id) {
+  const r = estado.recs.find((x) => x.id === Number(id));
+  if (!r) return;
+  recEditando = r.id;
+  renderDefinicoes();
+  $('#rec-tipo').value = r.tipo;
+  renderRecCatOptions();
+  $('#rec-valor').value = String(r.valor.toFixed(2)).replace('.', ',');
+  const freq = $('#rec-freq');
+  if (freq) freq.value = r.frequencia || 'mensal';
+  $('#rec-dia').value = String(r.dia || 1);
+  $('#rec-cat').value = r.categoria;
+  $('#rec-nota').value = r.nota || '';
+  ajustarCampoDiaRec();
+  const btn = $('[data-accao="add-rec"]');
+  if (btn) { btn.textContent = 'Guardar alterações'; btn.classList.remove('azul'); }
+  if (btn && btn.scrollIntoView) btn.scrollIntoView({ block: 'center' });
+}
+
+async function toggleRecorrente(id) {
+  const r = estado.recs.find((x) => x.id === Number(id));
+  if (!r) return;
+  const retomar = r.ativo === false;
+  await idbPut('recorrentes', { ...r, ativo: retomar });
+  await carregarDados();
+  renderDefinicoes();
+  aviso(retomar ? 'Recorrente retomado ✓' : 'Recorrente pausado ✓');
 }
 
 async function apagarRecorrente(id) {
@@ -1566,17 +2057,18 @@ const modal = { tipo: 'gasto', id: null, cat: '' };
 
 function abrirModal(tipo, mov) {
   fecharDetalhe();
+  const edicao = !!(mov && mov.id);
   modal.tipo = tipo;
-  modal.id = mov ? mov.id : null;
+  modal.id = edicao ? mov.id : null;
   modal.cat = mov ? mov.categoria : (catsDe(tipo)[0] || '');
 
   $('#erro-form').hidden = true;
-  $('#modal-titulo').textContent = (mov ? 'Editar ' : 'Adicionar ') + (tipo === 'gasto' ? 'gasto' : 'ganho');
+  $('#modal-titulo').textContent = (edicao ? 'Editar ' : 'Adicionar ') + (tipo === 'gasto' ? 'gasto' : 'ganho');
   $('#rot-valor').textContent = tipo === 'gasto' ? 'Valor gasto (€)' : 'Valor recebido (€)';
   traduzirDOM($('#modal-fundo').querySelector('.folha-cabecalho'));
   traduzirDOM($('#rot-valor').parentNode);
-  $('#f-valor').value = mov ? String(mov.valor.toFixed(2)).replace('.', ',') : '';
-  $('#f-data').value = mov ? mov.data : hojeISO();
+  $('#f-valor').value = mov && mov.valor != null ? String(mov.valor.toFixed(2)).replace('.', ',') : '';
+  $('#f-data').value = mov && mov.data ? mov.data : hojeISO();
   $('#f-nota').value = mov ? (mov.nota || '') : '';
 
   const ehGasto = tipo === 'gasto';
@@ -1585,7 +2077,9 @@ function abrirModal(tipo, mov) {
   if (ehGasto) renderChipsCat();
   else renderSelectOrigem(mov);
 
-  $('#btn-apagar-mov').hidden = !mov;
+  $('#btn-apagar-mov').hidden = !edicao;
+  $('#btn-duplicar-mov').hidden = !edicao;
+  $('#btn-repetir-ultimo').hidden = edicao;
   $('#btn-guardar-mov').className = 'btn-grande ' + (ehGasto ? 'vermelho' : 'verde');
 
   $('#modal-fundo').hidden = false;
@@ -1624,6 +2118,44 @@ function renderSelectOrigem(mov) {
     txt.value = '';
     txt.hidden = true;
   }
+}
+
+/* Categoria/origem atualmente escolhida no formulário */
+function categoriaAtualModal(tipo) {
+  if (tipo === 'gasto') return modal.cat || catsDe('gasto')[0] || '';
+  const v = $('#f-origem').value;
+  if (String(v).toLowerCase() === OUTRO.toLowerCase()) return $('#f-origem-texto').value.trim() || OUTRO;
+  if (v === '__novo__') return OUTRO;
+  return v;
+}
+
+/* Abre um novo movimento (modo adicionar) pré-preenchido com os dados dados */
+function copiarMovimento(m) {
+  abrirModal(m.tipo, { categoria: m.categoria, valor: m.valor, nota: m.nota || '', data: hojeISO() });
+  aviso('A copiar — confirma a data e guarda.');
+}
+
+/* Abre uma cópia do movimento em edição (data de hoje) */
+function duplicarMovimento() {
+  const categoria = categoriaAtualModal(modal.tipo);
+  copiarMovimento({
+    tipo: modal.tipo,
+    categoria,
+    valor: parseValor($('#f-valor').value) || undefined,
+    nota: $('#f-nota').value.trim()
+  });
+}
+
+/* Preenche o formulário com o último movimento do mesmo tipo */
+function repetirUltimo() {
+  const tipo = modal.tipo;
+  const ultimo = ordenarDesc(estado.movs.filter((m) => m.tipo === tipo))[0];
+  if (!ultimo) { aviso('Ainda não há movimentos para repetir.'); return; }
+  $('#f-valor').value = String(ultimo.valor.toFixed(2)).replace('.', ',');
+  $('#f-nota').value = ultimo.nota || '';
+  if (tipo === 'gasto') { modal.cat = ultimo.categoria; renderChipsCat(); }
+  else renderSelectOrigem({ categoria: ultimo.categoria });
+  aviso('Preenchido com o último movimento — confirma e guarda.');
 }
 
 function fecharModal() {
@@ -1688,12 +2220,14 @@ async function guardarMovimento(ev) {
 async function apagarMovimento() {
   if (!modal.id) return;
   if (!confirm('Apagar este movimento?')) return;
+  const removido = estado.movs.find((m) => m.id === modal.id);
   try {
     await idbDel('movimentos', modal.id);
     fecharModal();
     await carregarDados();
     renderAba(estado.aba);
-    aviso('Movimento apagado ✓');
+    if (removido) aviso('Movimento apagado ✓', { texto: 'Anular', fn: () => restaurarMovimentos([removido]) });
+    else aviso('Movimento apagado ✓');
   } catch (err) {
     console.error(err);
     aviso('Não foi possível apagar.');
@@ -1703,6 +2237,7 @@ async function apagarMovimento() {
 /* ---------- 8. Definições: categorias e backup ---------- */
 
 function abrirDef() {
+  recEditando = null;
   renderDefinicoes();
   $('#def-fundo').hidden = false;
   document.body.classList.add('sem-scroll');
@@ -1739,14 +2274,20 @@ function renderDefinicoes() {
     </section>`;
   };
 
-  const listaRec = (estado.recs || []).map((r) => `
-    <li>
+  const listaRec = (estado.recs || []).map((r) => {
+    const freq = r.frequencia || 'mensal';
+    const info = freq === 'semanal' ? 'semanal' : freq === 'anual' ? 'anual' : `dia ${r.dia}`;
+    const prox = r.ativo === false ? null : proximaOcorrencia(r, hojeISO());
+    return `<li>
       <span class="ponto" style="background:${corDe(r.categoria)}"></span>
-      <span class="nome">${esc(r.categoria)} · ${fmt(r.valor)} · dia ${r.dia}</span>
+      <span class="nome">${esc(r.categoria)} · ${fmt(r.valor)} · ${info}${r.ativo === false ? ' · pausado' : ''}${prox ? ` · próximo ${dtCurto.format(dataDe(prox))}` : ''}</span>
       <span class="n">${r.tipo === 'gasto' ? '−' : '+'}</span>
-      <button type="button" class="btn-mini perigo" data-accao="del-rec" data-id="${r.id}"
-              aria-label="Apagar recorrente">✕</button>
-    </li>`).join('');
+      <button type="button" class="btn-mini" data-accao="toggle-rec" data-id="${r.id}"
+              aria-label="${r.ativo === false ? 'Retomar' : 'Pausar'} recorrente">${r.ativo === false ? '▶' : '⏸'}</button>
+      <button type="button" class="btn-mini" data-accao="edit-rec" data-id="${r.id}" aria-label="Editar recorrente">✎</button>
+      <button type="button" class="btn-mini perigo" data-accao="del-rec" data-id="${r.id}" aria-label="Apagar recorrente">✕</button>
+    </li>`;
+  }).join('');
 
   const secRec = `<section class="def-sec">
     <h3>Movimentos recorrentes</h3>
@@ -1761,6 +2302,15 @@ function renderDefinicoes() {
       <label>Valor (€)
         <input type="text" inputmode="decimal" class="controlo" id="rec-valor" placeholder="0,00" autocomplete="off">
       </label>
+    </div>
+    <div class="def-grelha">
+      <label>Frequência
+        <select id="rec-freq" class="controlo">
+          <option value="mensal">Mensal</option>
+          <option value="semanal">Semanal</option>
+          <option value="anual">Anual</option>
+        </select>
+      </label>
       <label>Dia do mês
         <input type="number" min="1" max="31" class="controlo" id="rec-dia" value="1">
       </label>
@@ -1774,13 +2324,32 @@ function renderDefinicoes() {
       </label>
     </div>
     <button type="button" class="btn-mini azul" data-accao="add-rec">Adicionar recorrente</button>
-    <p class="def-nota">Cria sozinho um movimento fixo todos os meses no dia escolhido
-    (nos meses mais curtos usa o último dia) e, sempre que abres a app, completa o que faltar.</p>
+    <p class="def-nota">Cria sozinho um movimento fixo (mensal, semanal ou anual) e, sempre que abres a app,
+    completa o que faltar. Nos meses mais curtos usa o último dia.</p>
+  </section>`;
+
+  const listaOrc = catsDe('gasto').map((nome) => {
+    const o = orcDe('gasto', nome);
+    const valor = o && o.limite > 0 ? String(o.limite.toFixed(2)).replace('.', ',') : '';
+    return `<li>
+      <span class="ponto" style="background:${corDe(nome)}"></span>
+      <span class="nome">${esc(nome)}</span>
+      <input type="text" inputmode="decimal" class="controlo orc-campo" data-orc="gasto|${esc(nome)}"
+             value="${valor}" placeholder="—" autocomplete="off" aria-label="Limite mensal para ${esc(nome)}">
+    </li>`;
+  }).join('');
+
+  const secOrc = `<section class="def-sec">
+    <h3>Orçamentos mensais</h3>
+    <ul class="def-lista">${listaOrc || '<li><span class="nome">Sem categorias</span></li>'}</ul>
+    <p class="def-nota">Escreve um limite em € para cada categoria de gastos (vazio = sem limite).
+    O progresso aparece na aba Gastos e no Resumo.</p>
   </section>`;
 
   $('#def-conteudo').innerHTML =
     seccao('Categorias de gastos', 'gasto', 'Nova categoria') +
     seccao('Origens de ganhos', 'ganho', 'Nova origem') +
+    secOrc +
     secRec +
     `<section class="def-sec">
       <h3>Backup dos dados</h3>
@@ -1842,11 +2411,12 @@ function renderDefinicoes() {
     </section>
     <section class="def-sec">
       <h3>Sobre</h3>
-      <p class="def-nota">Carteira v1.3 — tudo guardado apenas neste dispositivo (IndexedDB).
+      <p class="def-nota">Carteira v1.4 — tudo guardado apenas neste dispositivo (IndexedDB).
       Sem contas, sem servidores, funciona offline.</p>
     </section>`;
 
   renderRecCatOptions();
+  ajustarCampoDiaRec();
 }
 
 async function onDefClick(ev) {
@@ -1868,6 +2438,8 @@ async function onDefClick(ev) {
     else if (accao === 'apagar') await apagarCat(tipo, nome);
     else if (accao === 'add-rec') await adicionarRecorrente();
     else if (accao === 'del-rec') await apagarRecorrente(alvo.dataset.id);
+    else if (accao === 'edit-rec') editarRecorrente(alvo.dataset.id);
+    else if (accao === 'toggle-rec') await toggleRecorrente(alvo.dataset.id);
   } catch (err) {
     console.error(err);
     aviso('A operação falhou.');
@@ -1881,6 +2453,14 @@ async function onDefChange(ev) {
   }
   if (ev.target.id === 'rec-tipo') {
     renderRecCatOptions();
+    return;
+  }
+  if (ev.target.id === 'rec-freq') {
+    ajustarCampoDiaRec();
+    return;
+  }
+  if (ev.target.dataset && ev.target.dataset.orc) {
+    await guardarOrcamento(ev.target.dataset.orc, ev.target.value);
     return;
   }
   if (ev.target.id === 'ap-per') {
@@ -1976,7 +2556,21 @@ async function apagarCat(tipo, nome) {
   await carregarDados();
   renderDefinicoes();
   renderAba(estado.aba);
-  aviso(usos > 0 ? `Categoria e ${usos} movimento(s) apagados ✓` : 'Apagada ✓');
+  if (cat || usos) {
+    aviso(usos > 0 ? `Categoria e ${usos} movimento(s) apagados ✓` : 'Apagada ✓', {
+      texto: 'Anular',
+      fn: async () => {
+        if (cat) await idbPut('categorias', cat);
+        if (afetados.length) await idbPutLote('movimentos', afetados);
+        await carregarDados();
+        renderDefinicoes();
+        renderAba(estado.aba);
+        aviso('Restaurado ✓');
+      }
+    });
+  } else {
+    aviso('Apagada ✓');
+  }
 }
 
 async function apagarTudo() {
@@ -2029,7 +2623,7 @@ async function apagarPorPeriodo() {
   await carregarDados();
   renderDefinicoes();
   renderAba(estado.aba);
-  aviso(`${alvo.length} movimento(s) apagado(s) ✓`);
+  aviso(`${alvo.length} movimento(s) apagado(s) ✓`, { texto: 'Anular', fn: () => restaurarMovimentos(alvo) });
 }
 
 /* ----- Exportar / importar ----- */
@@ -2053,7 +2647,8 @@ function exportarJSON() {
     exportadoEm: new Date().toISOString(),
     movimentos: estado.movs,
     categorias: estado.cats,
-    recorrentes: estado.recs || []
+    recorrentes: estado.recs || [],
+    orcamentos: estado.orcs || []
   };
   baixar(`carteira-backup-${hojeISO()}.json`, JSON.stringify(dados, null, 2), 'application/json');
   aviso('JSON exportado ✓');
@@ -2286,6 +2881,7 @@ async function importarJSON(ficheiro) {
         .map((r) => ({
           tipo: r.tipo,
           valor: round2(Number(r.valor)),
+          frequencia: ['mensal', 'semanal', 'anual'].includes(r.frequencia) ? r.frequencia : 'mensal',
           categoria: String(r.categoria).trim(),
           dia: Math.min(31, Math.max(1, parseInt(r.dia, 10) || 1)),
           nota: String(r.nota || '').slice(0, 140),
@@ -2295,9 +2891,21 @@ async function importarJSON(ficheiro) {
         }))
     : [];
 
+  const orcs = Array.isArray(obj.orcamentos)
+    ? obj.orcamentos
+        .filter((o) => o && typeof o === 'object' && (o.tipo === 'gasto' || o.tipo === 'ganho')
+          && String(o.categoria || '').trim() && Number(o.limite) > 0)
+        .map((o) => ({
+          chave: o.tipo + '|' + String(o.categoria).trim(),
+          tipo: o.tipo,
+          categoria: String(o.categoria).trim(),
+          limite: round2(Number(o.limite))
+        }))
+    : [];
+
   if (!confirm(`Substituir todos os dados por ${movs.length} movimento(s) do ficheiro?`)) return;
 
-  await idbSubstituir(movs, cats, recs);
+  await idbSubstituir(movs, cats, recs, orcs);
   await carregarDados();
   fecharDef();
   renderAba(estado.aba);
@@ -2467,7 +3075,7 @@ async function arrancar() {
   const nRec = await gerarRecorrentes();
   if (nRec) await carregarDados();
   bindEventos();
-  mostrarAba('gastos');
+  mostrarAba('resumo');
   iniciarObservadorIdioma();
   if (LANG === 'en') traduzirDOM(document.body);
   ligarViewport();
@@ -2491,7 +3099,17 @@ function bindEventos() {
   $('#btn-fechar-modal').addEventListener('click', fecharModal);
   $('#modal-fundo').addEventListener('click', (e) => { if (e.target.id === 'modal-fundo') fecharModal(); });
   $('#btn-apagar-mov').addEventListener('click', apagarMovimento);
+  $('#btn-duplicar-mov').addEventListener('click', duplicarMovimento);
+  $('#btn-repetir-ultimo').addEventListener('click', repetirUltimo);
   $('#form-mov').addEventListener('submit', guardarMovimento);
+
+  /* Botão "Anular" dentro do aviso (toast) */
+  $('#aviso').addEventListener('click', (e) => {
+    if (!e.target.closest('.aviso-btn') || !avisoAcao) return;
+    const fn = avisoAcao;
+    avisoFechar();
+    Promise.resolve(fn()).catch((err) => console.error(err));
+  });
 
   /* Origem "Outro" → mostra a caixa de texto (e "＋ Nova origem" → cria) */
   $('#f-origem').addEventListener('change', () => {
@@ -2559,6 +3177,11 @@ function bindEventos() {
     const okDia = e.target.closest('[data-acao="aplicar-dia"]');
     if (okDia) { aplicarDia(okDia.dataset.aba); return; }
 
+    /* Resumo: ações rápidas e relatório */
+    const rapida = e.target.closest('[data-acao-rapida]');
+    if (rapida) { abrirModal(rapida.dataset.acaoRapida); return; }
+    if (e.target.closest('#btn-imprimir')) { imprimirRelatorio(); return; }
+
     const chipHist = e.target.closest('[data-hist]');
     if (chipHist) {
       estado.hist = chipHist.dataset.hist;
@@ -2571,6 +3194,14 @@ function bindEventos() {
     const toca = e.target.closest('[data-dtipo][data-cat]');
     if (toca) { abrirDetalheCat(toca.dataset.dtipo, toca.dataset.cat); return; }
 
+    /* Duplicar com um toque (botão ⧉ em cada movimento) */
+    const dup = e.target.closest('[data-dup]');
+    if (dup) {
+      const m = estado.movs.find((x) => x.id === Number(dup.dataset.dup));
+      if (m) copiarMovimento(m);
+      return;
+    }
+
     const linha = e.target.closest('.mov[data-id]');
     if (linha) {
       const m = estado.movs.find((x) => x.id === Number(linha.dataset.id));
@@ -2579,7 +3210,13 @@ function bindEventos() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { fecharFiltros(); fecharDetalhe(); fecharModal(); fecharDef(); }
+    if (e.key === 'Escape') { fecharFiltros(); fecharDetalhe(); fecharModal(); fecharDef(); return; }
+    /* Enter/Espaço numa linha de movimento abre-o (a linha é um div clicável) */
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('mov')) {
+      e.preventDefault();
+      const m = estado.movs.find((x) => x.id === Number(e.target.dataset.id));
+      if (m) abrirModal(m.tipo, m);
+    }
   });
 
   /* Actualiza as cores dos gráficos se o utilizador mudar claro/escuro */

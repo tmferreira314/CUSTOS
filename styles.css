@@ -89,7 +89,7 @@ button { touch-action: manipulation; }
 
 .abas {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--cartao);
   border-top: 1px solid var(--linha);
   padding-bottom: env(safe-area-inset-bottom);
@@ -262,6 +262,13 @@ svg.grafico { width: 100%; height: auto; display: block; }
 .mov .t { display: block; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mov .n { display: block; font-size: 13px; color: var(--texto2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mov .val { font-weight: 800; font-size: 16px; white-space: nowrap; }
+.mov-dup {
+  flex: 0 0 auto; width: 36px; height: 36px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--linha); background: var(--chip); color: var(--texto2);
+  border-radius: 10px; font-size: 16px; line-height: 1; cursor: pointer;
+}
+.mov-dup:active { background: var(--acento); border-color: var(--acento); color: #fff; }
 
 .dia-cab {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
@@ -305,6 +312,23 @@ svg.grafico { width: 100%; height: auto; display: block; }
 }
 .campo .chips { margin-bottom: 0; }
 
+/* Linha com rótulo à esquerda e um botão (ex.: "Repetir último") à direita */
+.rot-linha {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 6px; min-height: 34px;
+}
+.rot-linha > span { font-size: 13px; font-weight: 700; color: var(--texto2); }
+.rot-linha .btn-mini { min-height: 34px; padding: 0 12px; }
+.cab-acoes { display: flex; align-items: center; gap: 2px; }
+
+/* Orçamentos (limites por categoria) */
+.orc-item { margin-bottom: 14px; }
+.orc-item:last-child { margin-bottom: 0; }
+.orc-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 15px; }
+.orc-topo .resto { font-size: 12px; color: var(--texto2); }
+.orc-item.excedido .barra-fill { background: var(--gasto); }
+.def-lista .orc-campo { width: 96px; flex: 0 0 auto; min-height: 40px; text-align: right; }
+
 .controlo {
   width: 100%; max-width: 100%; min-height: 50px;
   padding: 10px 12px; font-size: 16px;
@@ -326,7 +350,7 @@ svg.grafico { width: 100%; height: auto; display: block; }
 #f-valor::placeholder { color: var(--texto2); -webkit-text-fill-color: var(--texto2); opacity: .6; }
 
 .erro { color: var(--gasto); font-weight: 700; font-size: 14px; margin: 0 0 10px; }
-.acoes-folha { display: flex; gap: 10px; margin-top: 4px; }
+.acoes-folha { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; align-items: center; }
 .acoes-folha .btn-grande { margin-bottom: 0; flex: 1; }
 
 /* ---------- Definições ---------- */
@@ -367,9 +391,32 @@ select.controlo { max-width: 100%; }
   font-size: 14px; font-weight: 600;
   max-width: 88vw; text-align: center;
   box-shadow: 0 6px 22px rgba(0, 0, 0, .35);
+  display: flex; align-items: center; gap: 14px;
 }
 .aviso[hidden] { display: none; }
+.aviso-btn {
+  border: none; background: transparent; color: #7fb4ff;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  text-transform: uppercase; letter-spacing: .03em; padding: 4px 2px;
+  flex: 0 0 auto;
+}
 @media (prefers-color-scheme: dark) { .aviso { background: #48484a; } }
+
+/* ---------- Relatório para impressão / PDF ---------- */
+#impressao { display: none; }
+@media print {
+  body > *:not(#impressao) { display: none !important; }
+  #impressao { display: block !important; }
+  body { padding: 0; background: #fff; color: #000; }
+  #impressao h1 { font-size: 20px; margin: 0 0 4px; }
+  #impressao h2 { font-size: 15px; margin: 18px 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+  #impressao table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #impressao th, #impressao td { padding: 4px 6px; border-bottom: 1px solid #ddd; text-align: right; }
+  #impressao th:first-child, #impressao td:first-child { text-align: left; }
+  #impressao .rel-totais { display: flex; gap: 24px; margin: 8px 0; font-size: 14px; }
+  #impressao .rel-pos { color: #1a7a3f; }
+  #impressao .rel-neg { color: #b3261e; }
+}
 
 /* Ecrãs grandes: coluna centrada */
 @media (min-width: 700px) {
