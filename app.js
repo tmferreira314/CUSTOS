@@ -703,7 +703,9 @@ function barrasSVG(baldes, campo, cor) {
   const alt = H - pt - pb;
   const max = Math.max(...baldes.map((b) => b[campo]));
   const n = baldes.length;
-  const slot = (W - pe * 2) / n;
+  const slotMax = 46; // evita barras gigantes e desalinhadas em períodos curtos
+  const slot = Math.min(slotMax, (W - pe * 2) / n);
+  const margem = pe + (W - pe * 2 - slot * n) / 2; // centra o conjunto
   const bw = Math.max(2, slot * 0.65);
   const passo = Math.max(1, Math.ceil(n / 8));
 
@@ -711,7 +713,7 @@ function barrasSVG(baldes, campo, cor) {
   let rotulos = '';
   baldes.forEach((b, i) => {
     const h = (b[campo] / max) * alt;
-    const x = pe + i * slot + (slot - bw) / 2;
+    const x = margem + i * slot + (slot - bw) / 2;
     const y = H - pb - h;
     if (b[campo] > 0) {
       barras += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" ` +
@@ -719,7 +721,7 @@ function barrasSVG(baldes, campo, cor) {
         `<title>${esc(b.rotulo)}: ${fmt(b[campo])}</title></rect>`;
     }
     if (i % passo === 0) {
-      rotulos += `<text x="${(pe + i * slot + slot / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" class="svg-rotulo">${esc(b.rotulo)}</text>`;
+      rotulos += `<text x="${(margem + i * slot + slot / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" class="svg-rotulo">${esc(b.rotulo)}</text>`;
     }
   });
 
@@ -737,8 +739,11 @@ function balancoSVG(baldes) {
   const W = 320, H = 180, pt = 18, pb = 26, pe = 4;
   const alt = H - pt - pb;
   const n = baldes.length;
-  const slot = (W - pe * 2) / n;
+  const slotMax = 46; // evita barras gigantes e desalinhadas em períodos curtos
+  const slot = Math.min(slotMax, (W - pe * 2) / n);
+  const margem = pe + (W - pe * 2 - slot * n) / 2; // centra o conjunto
   const bw = Math.max(1.5, slot * 0.3);
+  const par = bw * 2 + 1.5; // largura do par ganhos+gastos
 
   const maxBar = Math.max(1, ...baldes.flatMap((b) => [b.ganhos, b.gastos]));
   let acum = 0;
@@ -760,14 +765,15 @@ function balancoSVG(baldes) {
   let rotulos = '';
 
   baldes.forEach((b, i) => {
-    const x0 = pe + i * slot;
+    const x0 = margem + i * slot;
+    const xIni = x0 + Math.max(0, (slot - par) / 2); // par centrado dentro do balde
     const hg = (b.ganhos / maxBar) * alt;
     const hs = (b.gastos / maxBar) * alt;
     if (b.ganhos > 0) {
-      rects += `<rect x="${(x0 + slot * 0.12).toFixed(1)}" y="${yBar(b.ganhos).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, hg).toFixed(1)}" rx="1.5" fill="${corGan}"><title>${esc(b.rotulo)} ganhos: ${fmt(b.ganhos)}</title></rect>`;
+      rects += `<rect x="${xIni.toFixed(1)}" y="${yBar(b.ganhos).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, hg).toFixed(1)}" rx="1.5" fill="${corGan}"><title>${esc(b.rotulo)} ganhos: ${fmt(b.ganhos)}</title></rect>`;
     }
     if (b.gastos > 0) {
-      rects += `<rect x="${(x0 + slot * 0.12 + bw + 1.5).toFixed(1)}" y="${yBar(b.gastos).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, hs).toFixed(1)}" rx="1.5" fill="${corGas}"><title>${esc(b.rotulo)} gastos: ${fmt(b.gastos)}</title></rect>`;
+      rects += `<rect x="${(xIni + bw + 1.5).toFixed(1)}" y="${yBar(b.gastos).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(2, hs).toFixed(1)}" rx="1.5" fill="${corGas}"><title>${esc(b.rotulo)} gastos: ${fmt(b.gastos)}</title></rect>`;
     }
     pontos += `${(x0 + slot / 2).toFixed(1)},${yLin(cums[i]).toFixed(1)} `;
     if (i % passo === 0) {
@@ -775,7 +781,9 @@ function balancoSVG(baldes) {
     }
   });
 
-  const linha = `<polyline points="${pontos.trim()}" fill="none" stroke="${corLin}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const linha = n > 1
+    ? `<polyline points="${pontos.trim()}" fill="none" stroke="${corLin}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
+    : `<circle cx="${(margem + slot / 2).toFixed(1)}" cy="${yLin(cums[0]).toFixed(1)}" r="3" fill="${corLin}"/>`;
 
   return `<svg viewBox="0 0 ${W} ${H}" class="grafico" role="img" aria-label="Ganhos, gastos e saldo acumulado">
     ${rects}${linha}${rotulos}
